@@ -1,5 +1,7 @@
 from typing import List, Set
 
+import asyncio
+
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
@@ -60,8 +62,8 @@ class ChatApp(App):
             yield self.list_view
 
             with Vertical(id="chat_container"):
-                with VerticalScroll(id="chat_view"):
-                    pass
+                self.chat_view = VerticalScroll(id="chat_view")
+                yield self.chat_view
 
                 yield Input(placeholder="Type message...")
 
@@ -88,11 +90,13 @@ class ChatApp(App):
     def open_chat(self, chat_id: int) -> None:
         self.active_chat = chat_id
 
-        view = self.query_one("#chat_view", VerticalScroll)
-        view.remove_children()
+        self.chat_view.remove_children()
 
         for msg in load_chat(chat_id):
-            view.mount(Static(msg))
+            self.chat_view.mount(Static(msg))
+
+        # 🔥 auto-scroll after loading full chat
+        self.chat_view.scroll_end()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         visible = self.visible_chats()
@@ -100,7 +104,30 @@ class ChatApp(App):
         if 0 <= event.index < len(visible):
             self.open_chat(visible[event.index])
 
-    # 🔥 KEYBOARD ACTION
+    # -------------------------
+    # 🔥 INPUT → ASYNC HANDLER
+    # -------------------------
+
+    async def handle_input(self, text: str) -> None:
+        await asyncio.sleep(0)
+
+        self.chat_view.mount(Static(f"You: {text}"))
+
+        # 🔥 auto-scroll after new message
+        self.chat_view.scroll_end()
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        text = event.value.strip()
+
+        if text:
+            await self.handle_input(text)
+
+        event.input.value = ""
+
+    # -------------------------
+    # CLOSE CHAT
+    # -------------------------
+
     def action_close_chat(self) -> None:
         visible = self.visible_chats()
 
@@ -118,9 +145,8 @@ class ChatApp(App):
         if visible:
             self.open_chat(visible[0])
         else:
-            view = self.query_one("#chat_view", VerticalScroll)
-            view.remove_children()
-            view.mount(Static("No chats"))
+            self.chat_view.remove_children()
+            self.chat_view.mount(Static("No chats"))
 
 
 def main() -> None:
