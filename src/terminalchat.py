@@ -12,6 +12,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
 
+from opcodes import Opcode as opcode
 from terminal_config import CSS, BINDINGS
 from config import Config
 from communication import Communication
@@ -24,10 +25,9 @@ class ChatApp(App):
     def __init__(self) -> None:
         super().__init__()
 
-        # chat storage: user -> messages
-        self.chats: Dict[str, List[str]] = {}
+        # chat storage: target -> messages (structured)
+        self.chats: Dict[str, List[dict]] = {}
 
-        # UI state
         self.closed: Set[str] = set()
         self.active_chat: str | None = None
 
@@ -53,14 +53,13 @@ class ChatApp(App):
         self.rebuild_list()
 
         if self.chats:
-            first_user = next(iter(self.chats))
-            self.open_chat(first_user)
+            first = next(iter(self.chats))
+            self.open_chat(first)
 
         self.run_worker(self.start_backend(), exclusive=True)
 
     async def start_backend(self) -> None:
         await self.comm.connect()
-
         await self.comm.start_sender()
         await self.comm.identify()
         await self.comm.start_receiver()
@@ -73,28 +72,29 @@ class ChatApp(App):
 
             if op == "PIN":
                 await self.comm.priority_message(opcode="PIN")
+                continue
 
-            elif op == "PRI":
-                data = json.loads(json_message)
+            data = json.loads(json_message)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            if op == "PRI":
                 user = data.get("character")
                 message = (data.get("message") or "").strip()
 
-                # ensure chat exists
                 if user not in self.chats:
                     self.chats[user] = []
 
-                # reopen if closed
                 if user in self.closed:
                     self.closed.remove(user)
 
-                # store message
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                # formatted message
                 formatted_message = f"[{timestamp}] {user}: {message}"
-                # self.chats[user].append(f"[{timestamp}] **{user}**: {message}")
+                formatted_message_bold = f"[{timestamp}] [b]{user}[/b]: {message}"
 
-                # logging per user
+                self.chats[user].append({
+                    "type": "PRI",
+                    "text": formatted_message
+                })
+
                 base_path = Path("chats") / str(self.config_obj.get("character")) / str(user)
                 base_path.mkdir(parents=True, exist_ok=True)
 
@@ -104,36 +104,56 @@ class ChatApp(App):
                     f.write(f"{formatted_message}\n")
 
                 if user == self.active_chat:
-                    self.chat_view.mount(Static(f"[{timestamp}] [b]{user}[/b]: {message}", markup=True))
+                    self.chat_view.mount(Static(formatted_message_bold, markup=True))
                     self.chat_view.scroll_end()
 
                 self.rebuild_list()
 
             elif op == "MSG":
-                pass
+                room = data.get("room")
+                message = (data.get("message") or "").strip()
 
-    def add_message(self, user: str, msg: str) -> None:
-        if user not in self.chats:
-            return
+                if room not in self.chats:
+                    self.chats[room] = []
 
-        self.chat_view.mount(Static(msg))
-        self.chat_view.scroll_end()
+                if room in self.closed:
+                    self.closed.remove(room)
+
+                formatted_message = f"[{timestamp}] {message}"
+
+                self.chats[room].append({
+                    "type": "MSG",
+                    "text": formatted_message
+                })
+
+                base_path = Path("chats") / str(self.config_obj.get("character")) / str(room)
+                base_path.mkdir(parents=True, exist_ok=True)
+                log_file = base_path / "chat.log"
+
+                with open(log_file, "a", encoding="utf-8") as f:
+                    f.write(f"{formatted_message}\n")
+
+                if room == self.active_chat:
+                    self.chat_view.mount(Static(formatted_message))
+                    self.chat_view.scroll_end()
+
+                self.rebuild_list()
 
     def rebuild_list(self) -> None:
         self.list_view.clear()
 
-        for user in self.chats.keys():
-            if user in self.closed:
+        for chat in self.chats.keys():
+            if chat in self.closed:
                 continue
 
-            self.list_view.append(ListItem(Static(user)))
+            self.list_view.append(ListItem(Static(chat)))
 
-    def open_chat(self, user: str) -> None:
-        self.active_chat = user
+    def open_chat(self, chat: str) -> None:
+        self.active_chat = chat
 
         self.chat_view.remove_children()
 
-        base_path = Path("chats") / str(self.config_obj.get("character")) / str(user)
+        base_path = Path("chats") / str(self.config_obj.get("character")) / str(chat)
         log_file = base_path / "chat.log"
 
         if log_file.exists():
@@ -146,10 +166,25 @@ class ChatApp(App):
         self.chat_view.scroll_end()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        visible_users = [u for u in self.chats.keys() if u not in self.closed]
+        visible = [c for c in self.chats.keys() if c not in self.closed]
 
-        if 0 <= event.index < len(visible_users):
-            self.open_chat(visible_users[event.index])
+        if 0 <= event.index < len(visible):
+            self.open_chat(visible[event.index])
+
+    def action_close_chat(self) -> None:
+        if not self.active_chat:
+            return
+
+        self.closed.add(self.active_chat)
+        self.rebuild_list()
+
+        visible = [c for c in self.chats.keys() if c not in self.closed]
+
+        if visible:
+            self.open_chat(visible[0])
+        else:
+            self.chat_view.remove_children()
+            self.chat_view.mount(Static("No chats"))
 
     async def handle_input(self, text: str) -> None:
         await asyncio.sleep(0)
@@ -157,31 +192,46 @@ class ChatApp(App):
         if not self.active_chat:
             return
 
+        message = text
+        target = self.active_chat
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        msg = f"You: {text}"
-
-        # UI
-        self.chat_view.mount(Static(msg))
-        self.chat_view.scroll_end()
-
-        # local model update (optional but consistent)
-        self.chats[self.active_chat].append(msg)
-
-        # logging
-        base_path = Path("chats") / str(self.config_obj.get("character")) / str(self.active_chat)
+        base_path = Path("chats") / str(self.config_obj.get("character")) / str(target)
         base_path.mkdir(parents=True, exist_ok=True)
-
         log_file = base_path / "chat.log"
 
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"[{timestamp}] {msg}\n")
+        is_channel = target.startswith("#")  # falls du später anders entscheidest
 
-        # SEND to server
-        await self.comm.message("MSG", {
-            "to": self.active_chat,
-            "message": text
-        })
+        if is_channel:
+            opcode_used = opcode.CHANNEL_MESSAGE
+
+            data = {
+                "channel": target,
+                "message": message
+            }
+        else:
+            opcode_used = opcode.PRIVATE_MESSAGE
+
+            data = {
+                "character": self.config_obj.get("character"),
+                "recipient": target,
+                "message": message
+            }
+        me = self.config_obj.get("character")
+        formatted_message = f"[{timestamp}] {me}: {message}"
+        formatted_message_bold = f"[{timestamp}] [b]{me}[/b]: {message}"
+
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"{formatted_message}\n")
+
+        # UI update (unchanged behavior)
+        self.chats[target].append(message)
+
+        self.chat_view.mount(Static(f"{formatted_message_bold}", markup=True))
+        self.chat_view.scroll_end()
+
+        # send
+        await self.comm.message(opcode_used, data)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
@@ -190,19 +240,6 @@ class ChatApp(App):
             await self.handle_input(text)
 
         event.input.value = ""
-
-    def action_close_chat(self) -> None:
-        if self.active_chat:
-            self.closed.add(self.active_chat)
-            self.rebuild_list()
-
-            visible = [u for u in self.chats.keys() if u not in self.closed]
-
-            if visible:
-                self.open_chat(visible[0])
-            else:
-                self.chat_view.remove_children()
-                self.chat_view.mount(Static("No chats"))
 
 
 def main() -> None:
