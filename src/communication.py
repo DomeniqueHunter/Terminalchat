@@ -10,6 +10,10 @@ from typing import Deque, Optional, Tuple
 COMM_ERROR = "__ERROR"
 
 
+def prettify(op:str="", message:str="") -> tuple:
+    return op, message
+
+
 class Communication:
 
     def __init__(self, config:dict) -> None:
@@ -96,7 +100,7 @@ class Communication:
                 while not self._recv_queue:
                     await self._recv_condition.wait()
 
-                return self._recv_queue.popleft()
+                return prettify(*self._recv_queue.popleft())
 
         except Exception as e:
             # print(f"Connection Error: {e}")

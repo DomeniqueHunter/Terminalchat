@@ -3,10 +3,15 @@
 from typing import List, Set
 
 import asyncio
+import json
+
+from datetime import datetime
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
+
+from pathlib import Path
 
 from terminal_config import CSS, BINDINGS
 from config import Config
@@ -62,17 +67,51 @@ class ChatApp(App):
     async def start_backend(self) -> None:
         await self.comm.connect()
 
-        # IMPORTANT:
-        # receiver must NOT block UI -> run as background worker
-        # self.run_worker(self.receiver_loop(), exclusive=False)
-
         await self.comm.start_sender()
         await self.comm.identify()
         await self.comm.start_receiver()
 
-    async def receiver_loop(self) -> None:
-        # assuming start_receiver is a long-running async loop
-        await self.comm.start_receiver()
+        self.run_worker(self.receiver_consumer(), exclusive=False)
+    
+    async def receiver_consumer(self) -> None:
+        log_file = Path("chat.log")
+        while True:
+            op, json_message = await self.comm.receive()
+
+            if op == "PIN": # ping event
+                await self.comm.priority_message(opcode="PIN")
+
+            elif op == "PRI": # private message
+                data = json.loads(json_message)
+                user = data.get("character")
+                message = data.get("message")
+                message = message.strip()
+
+                # logging of chats
+                base_path = Path("chats") / str(self.config_obj.get("character")) / str(user)
+                base_path.mkdir(parents=True, exist_ok=True)
+                log_file = base_path / "chat.log"
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                if user not in self.all_chats:
+                    # update chats
+                    self.all_chats.append(user)
+                    self.rebuild_list()
+
+                with open(log_file, "a", encoding="utf-8") as f:
+                    f.write(f"[{timestamp}] {json_message}\n")
+
+
+            elif op == "MSG": # channel message
+                pass
+
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"{timestamp}: {json_message}\n")
+            
+
+    def add_message(self, opcode: str, msg: str) -> None:
+        self.chat_view.mount(Static(f"{opcode}: {msg}"))
+        self.chat_view.scroll_end()
 
     def visible_chats(self) -> List[int]:
         return [i for i in range(len(self.all_chats)) if i not in self.closed]
