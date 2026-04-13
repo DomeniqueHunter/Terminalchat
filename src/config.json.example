@@ -1,0 +1,10 @@
+{
+	"account"   : "",
+	"password"  : "",
+	"character" : "",
+	"protocol"  : "wss://",
+	"server"    : "chat.f-list.net",
+	"endpoint"  : "/chat2",
+	"port"      : 8722,
+	"default_channels": ["Development"],
+}

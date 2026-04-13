@@ -1,1 +1,4 @@
 textual
+aiohttp
+requests
+websockets

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from typing import List, Set
 
 import asyncio
@@ -5,6 +7,8 @@ import asyncio
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
+
+from terminal_config import CSS, BINDINGS
 
 
 def load_chat(chat_id: int) -> List[str]:
@@ -17,36 +21,8 @@ def load_chat(chat_id: int) -> List[str]:
 
 class ChatApp(App):
 
-    BINDINGS = [
-        ("ctrl+x", "close_chat", "Close chat"),
-    ]
-
-    CSS = """
-    #main {
-        layout: horizontal;
-        height: 1fr;
-    }
-
-    #chat_list {
-        width: 25%;
-        border: solid green;
-    }
-
-    #chat_container {
-        width: 75%;
-        layout: vertical;
-    }
-
-    #chat_view {
-        height: 1fr;
-        overflow-y: auto;
-        border: solid blue;
-    }
-
-    ListItem {
-        height: 1;
-    }
-    """
+    BINDINGS = BINDINGS
+    CSS = CSS
 
     def __init__(self) -> None:
         super().__init__()
