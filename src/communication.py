@@ -28,8 +28,8 @@ class Communication:
         data = {
             "method": "ticket",
             "ticket": await self.get_api_ticket(),
-            "account": str(self.config.account),
-            "character": str(self.config.character),
+            "account": str(self.config.get("account")),
+            "character": str(self.config.get("character")),
             "cname": "Terminal Chat Client",
             "cversion": "0.0.1",
         }
@@ -38,7 +38,7 @@ class Communication:
         await self.read()
 
     async def connect(self) -> None:
-        uri = self.config.protocol + self.config.server + self.config.endpoint
+        uri = self.config.get("protocol") + self.config.get("server") + self.config.get("endpoint")
 
         try:
             self.connection = await websockets.client.connect(uri)
@@ -103,7 +103,7 @@ class Communication:
             return COMM_ERROR, "Connection closed"
 
     async def get_api_ticket(self) -> str:
-        return await get_ticket(self.bot.config.account, self.bot.config.password)
+        return await get_ticket(self.config.get("account"), self.config.get("password"))
 
     def status(self) -> str:
         return self.connection.state.name

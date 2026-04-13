@@ -9,6 +9,8 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
 
 from terminal_config import CSS, BINDINGS
+from config import Config
+from communication import Communication
 
 
 def load_chat(chat_id: int) -> List[str]:
@@ -20,7 +22,6 @@ def load_chat(chat_id: int) -> List[str]:
 
 
 class ChatApp(App):
-
     BINDINGS = BINDINGS
     CSS = CSS
 
@@ -29,6 +30,9 @@ class ChatApp(App):
         self.all_chats: List[str] = ["Chat 1", "Chat 2"]
         self.closed: Set[int] = set()
         self.active_chat: int = 0
+
+        self.config_obj = None
+        self.comm = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -52,6 +56,24 @@ class ChatApp(App):
         if visible:
             self.open_chat(visible[0])
 
+        # start async backend inside textual event loop
+        self.run_worker(self.start_backend(), exclusive=True)
+
+    async def start_backend(self) -> None:
+        await self.comm.connect()
+
+        # IMPORTANT:
+        # receiver must NOT block UI -> run as background worker
+        # self.run_worker(self.receiver_loop(), exclusive=False)
+
+        await self.comm.start_sender()
+        await self.comm.identify()
+        await self.comm.start_receiver()
+
+    async def receiver_loop(self) -> None:
+        # assuming start_receiver is a long-running async loop
+        await self.comm.start_receiver()
+
     def visible_chats(self) -> List[int]:
         return [i for i in range(len(self.all_chats)) if i not in self.closed]
 
@@ -59,9 +81,7 @@ class ChatApp(App):
         self.list_view.clear()
 
         for chat_id in self.visible_chats():
-            self.list_view.append(
-                ListItem(Static(self.all_chats[chat_id]))
-            )
+            self.list_view.append(ListItem(Static(self.all_chats[chat_id])))
 
     def open_chat(self, chat_id: int) -> None:
         self.active_chat = chat_id
@@ -71,7 +91,6 @@ class ChatApp(App):
         for msg in load_chat(chat_id):
             self.chat_view.mount(Static(msg))
 
-        # 🔥 auto-scroll after loading full chat
         self.chat_view.scroll_end()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
@@ -80,16 +99,10 @@ class ChatApp(App):
         if 0 <= event.index < len(visible):
             self.open_chat(visible[event.index])
 
-    # -------------------------
-    # 🔥 INPUT → ASYNC HANDLER
-    # -------------------------
-
     async def handle_input(self, text: str) -> None:
         await asyncio.sleep(0)
 
         self.chat_view.mount(Static(f"You: {text}"))
-
-        # 🔥 auto-scroll after new message
         self.chat_view.scroll_end()
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -100,10 +113,6 @@ class ChatApp(App):
 
         event.input.value = ""
 
-    # -------------------------
-    # CLOSE CHAT
-    # -------------------------
-
     def action_close_chat(self) -> None:
         visible = self.visible_chats()
 
@@ -111,7 +120,6 @@ class ChatApp(App):
             return
 
         chat_id = self.active_chat
-
         self.closed.add(chat_id)
 
         self.rebuild_list()
@@ -127,6 +135,14 @@ class ChatApp(App):
 
 def main() -> None:
     app = ChatApp()
+
+    # dependency injection (clean & simple)
+    config = Config("config.json")
+    comm = Communication(config)
+
+    app.config_obj = config
+    app.comm = comm
+
     app.run()
 
 

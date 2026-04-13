@@ -1,18 +1,31 @@
 import json
+from pathlib import Path
 
-class Config():
 
-    def __init__(self, file:str, verbose:bool=True) -> None:
-        json_data = open(file).read()
-        data = json.loads(json_data)
+class Config(dict):
+    def __init__(self, file_path):
+        path = Path(file_path).expanduser().resolve()
 
-        for key in data.keys():
-            if verbose:
-                if key != 'password':
-                    print("key:",key,"->",data[key])
-                else:
-                    print("key:",key,"->","******")
-            self.add(key, data[key])
+        if not path.exists():
+            raise FileNotFoundError(f"Config file not found: {path}")
 
-    def add(self,k:str,v:str) -> None:
-        self.__dict__[k] = v
+        with open(path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        super().__init__(data)
+
+
+def load_json_config(file_path: str) -> dict:
+    with open(file_path, "r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    return data
+
+
+def main() -> None:
+    file_path = "config.json"
+    load_json_config(file_path)
+
+
+if __name__ == "__main__":
+    main()
