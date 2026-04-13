@@ -16,6 +16,7 @@ from opcodes import Opcode as opcode
 from terminal_config import CSS, BINDINGS
 from config import Config
 from communication import Communication
+from channels import ChannelManager
 
 
 class ChatApp(App):
@@ -27,6 +28,7 @@ class ChatApp(App):
 
         # chat storage: target -> messages (structured)
         self.chats: Dict[str, List[dict]] = {}
+        self.channel_manager = ChannelManager()
 
         self.closed: Set[str] = set()
         self.active_chat: str | None = None
@@ -138,6 +140,13 @@ class ChatApp(App):
                     self.chat_view.scroll_end()
 
                 self.rebuild_list()
+            elif op == "ORS":
+                self.channel_manager.add_open_private_channels(json_message)
+                continue
+
+            elif op == "CHA":
+                self.channel_manager.add_official_channels(json_message)
+                continue
 
     def rebuild_list(self) -> None:
         self.list_view.clear()
@@ -194,6 +203,8 @@ class ChatApp(App):
 
         message = text
         target = self.active_chat
+        me = self.config_obj.get("character")
+
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         base_path = Path("chats") / str(self.config_obj.get("character")) / str(target)
@@ -213,11 +224,11 @@ class ChatApp(App):
             opcode_used = opcode.PRIVATE_MESSAGE
 
             data = {
-                "character": self.config_obj.get("character"),
+                "character": me,
                 "recipient": target,
                 "message": message
             }
-        me = self.config_obj.get("character")
+        
         formatted_message = f"[{timestamp}] {me}: {message}"
         formatted_message_bold = f"[{timestamp}] [b]{me}[/b]: {message}"
 
