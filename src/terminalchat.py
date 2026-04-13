@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import List, Set
+from typing import Dict, List, Set
 
 import asyncio
 import json
@@ -17,23 +17,19 @@ from config import Config
 from communication import Communication
 
 
-def load_chat(chat_id: int) -> List[str]:
-    if chat_id == 0:
-        return ["Hello!", "Hi!", "Chat 1"]
-    if chat_id == 1:
-        return ["Another chat", "More messages"]
-    return ["Empty chat"]
-
-
 class ChatApp(App):
     BINDINGS = BINDINGS
     CSS = CSS
 
     def __init__(self) -> None:
         super().__init__()
-        self.all_chats: List[str] = []
+
+        # chat storage: user -> messages
+        self.chats: Dict[str, List[str]] = {}
+
+        # UI state
         self.closed: Set[str] = set()
-        self.active_chat: int = 0
+        self.active_chat: str | None = None
 
         self.config_obj = None
         self.comm = None
@@ -56,8 +52,9 @@ class ChatApp(App):
     def on_mount(self) -> None:
         self.rebuild_list()
 
-        if self.all_chats:
-            self.open_chat(0)
+        if self.chats:
+            first_user = next(iter(self.chats))
+            self.open_chat(first_user)
 
         self.run_worker(self.start_backend(), exclusive=True)
 
@@ -82,63 +79,109 @@ class ChatApp(App):
                 user = data.get("character")
                 message = (data.get("message") or "").strip()
 
-                # logging
-                base_path = Path("chats") / str(self.config_obj.get("character")) / str(user)
-                base_path.mkdir(parents=True, exist_ok=True)
-
-                log_file = base_path / "chat.log"
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                with open(log_file, "a", encoding="utf-8") as f:
-                    f.write(f"[{timestamp}] {json_message}\n")
-
-                # add chat if new
-                if user not in self.all_chats:
-                    self.all_chats.append(user)
+                # ensure chat exists
+                if user not in self.chats:
+                    self.chats[user] = []
 
                 # reopen if closed
                 if user in self.closed:
                     self.closed.remove(user)
+
+                # store message
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                # formatted message
+                formatted_message = f"[{timestamp}] {user}: {message}"
+                # self.chats[user].append(f"[{timestamp}] **{user}**: {message}")
+
+                # logging per user
+                base_path = Path("chats") / str(self.config_obj.get("character")) / str(user)
+                base_path.mkdir(parents=True, exist_ok=True)
+
+                log_file = base_path / "chat.log"
+
+                with open(log_file, "a", encoding="utf-8") as f:
+                    f.write(f"{formatted_message}\n")
+
+                if user == self.active_chat:
+                    self.chat_view.mount(Static(f"[{timestamp}] [b]{user}[/b]: {message}", markup=True))
+                    self.chat_view.scroll_end()
 
                 self.rebuild_list()
 
             elif op == "MSG":
                 pass
 
-    def add_message(self, opcode: str, msg: str) -> None:
-        self.chat_view.mount(Static(f"{opcode}: {msg}"))
+    def add_message(self, user: str, msg: str) -> None:
+        if user not in self.chats:
+            return
+
+        self.chat_view.mount(Static(msg))
         self.chat_view.scroll_end()
 
     def rebuild_list(self) -> None:
         self.list_view.clear()
 
-        for user in self.all_chats:
+        for user in self.chats.keys():
             if user in self.closed:
                 continue
 
             self.list_view.append(ListItem(Static(user)))
 
-    def open_chat(self, chat_id: int) -> None:
-        self.active_chat = chat_id
+    def open_chat(self, user: str) -> None:
+        self.active_chat = user
 
         self.chat_view.remove_children()
 
-        for msg in load_chat(chat_id):
-            self.chat_view.mount(Static(msg))
+        base_path = Path("chats") / str(self.config_obj.get("character")) / str(user)
+        log_file = base_path / "chat.log"
+
+        if log_file.exists():
+            with open(log_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    self.chat_view.mount(Static(line.rstrip()))
+        else:
+            self.chat_view.mount(Static("No messages yet"))
 
         self.chat_view.scroll_end()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        visible = [u for u in self.all_chats if u not in self.closed]
+        visible_users = [u for u in self.chats.keys() if u not in self.closed]
 
-        if 0 <= event.index < len(visible):
-            self.open_chat(self.all_chats.index(visible[event.index]))
+        if 0 <= event.index < len(visible_users):
+            self.open_chat(visible_users[event.index])
 
     async def handle_input(self, text: str) -> None:
         await asyncio.sleep(0)
 
-        self.chat_view.mount(Static(f"You: {text}"))
+        if not self.active_chat:
+            return
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        msg = f"You: {text}"
+
+        # UI
+        self.chat_view.mount(Static(msg))
         self.chat_view.scroll_end()
+
+        # local model update (optional but consistent)
+        self.chats[self.active_chat].append(msg)
+
+        # logging
+        base_path = Path("chats") / str(self.config_obj.get("character")) / str(self.active_chat)
+        base_path.mkdir(parents=True, exist_ok=True)
+
+        log_file = base_path / "chat.log"
+
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"[{timestamp}] {msg}\n")
+
+        # SEND to server
+        await self.comm.message("MSG", {
+            "to": self.active_chat,
+            "message": text
+        })
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
@@ -149,21 +192,17 @@ class ChatApp(App):
         event.input.value = ""
 
     def action_close_chat(self) -> None:
-        if not self.all_chats:
-            return
+        if self.active_chat:
+            self.closed.add(self.active_chat)
+            self.rebuild_list()
 
-        user = self.all_chats[self.active_chat]
-        self.closed.add(user)
+            visible = [u for u in self.chats.keys() if u not in self.closed]
 
-        self.rebuild_list()
-
-        visible = [u for u in self.all_chats if u not in self.closed]
-
-        if visible:
-            self.open_chat(self.all_chats.index(visible[0]))
-        else:
-            self.chat_view.remove_children()
-            self.chat_view.mount(Static("No chats"))
+            if visible:
+                self.open_chat(visible[0])
+            else:
+                self.chat_view.remove_children()
+                self.chat_view.mount(Static("No chats"))
 
 
 def main() -> None:
