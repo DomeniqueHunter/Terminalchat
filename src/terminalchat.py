@@ -14,6 +14,7 @@ from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
 
 from terminal_config import CSS, BINDINGS
 from config import Config
+from consumer import Consumer
 
 from fchat import Opcode as opcode
 from fchat import Communication
@@ -36,6 +37,11 @@ class ChatApp(App):
 
         self.config_obj = None
         self.comm = None
+        self.consumer = Consumer(self)
+    
+    def set_comm(self, comm:Communication):
+        self.comm = comm
+        self.consumer.comm = comm
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -67,89 +73,8 @@ class ChatApp(App):
         await self.comm.identify()
         await self.comm.start_receiver()
 
-        self.run_worker(self.receiver_consumer(), exclusive=False)
+        self.run_worker(self.consumer.receive(), exclusive=False)
         self.run_worker(self.periodic_worker(), exclusive=False)
-
-    async def receiver_consumer(self) -> None:
-        while True:
-            op, json_message = await self.comm.receive()
-
-            if op == opcode.PING:
-                await self.comm.priority_message(opcode="PIN")
-                continue
-
-            data = json.loads(json_message)
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            if op == opcode.PRIVATE_MESSAGE:
-                user = data.get("character")
-                message = (data.get("message") or "").strip()
-
-                if user not in self.chats:
-                    self.chats[user] = []
-
-                if user in self.closed:
-                    self.closed.remove(user)
-
-                formatted_message = f"[{timestamp}] {user}: {message}"
-                formatted_message_bold = f"[{timestamp}] [b]{user}[/b]: {message}"
-
-                self.chats[user].append({
-                    "type": "PRI",
-                    "text": formatted_message
-                })
-
-                base_path = Path("chats") / str(self.config_obj.get("character")) / str(user)
-                base_path.mkdir(parents=True, exist_ok=True)
-
-                log_file = base_path / "chat.log"
-
-                with open(log_file, "a", encoding="utf-8") as f:
-                    f.write(f"{formatted_message}\n")
-
-                if user == self.active_chat:
-                    self.chat_view.mount(Static(formatted_message_bold, markup=True))
-                    self.chat_view.scroll_end()
-
-                self.rebuild_list()
-
-            elif op == opcode.CHANNEL_MESSAGE:
-                room = data.get("room")
-                message = (data.get("message") or "").strip()
-
-                if room not in self.chats:
-                    self.chats[room] = []
-
-                if room in self.closed:
-                    self.closed.remove(room)
-
-                formatted_message = f"[{timestamp}] {message}"
-
-                self.chats[room].append({
-                    "type": "MSG",
-                    "text": formatted_message
-                })
-
-                base_path = Path("chats") / str(self.config_obj.get("character")) / str(room)
-                base_path.mkdir(parents=True, exist_ok=True)
-                log_file = base_path / "chat.log"
-
-                with open(log_file, "a", encoding="utf-8") as f:
-                    f.write(f"{formatted_message}\n")
-
-                if room == self.active_chat:
-                    self.chat_view.mount(Static(formatted_message))
-                    self.chat_view.scroll_end()
-
-                self.rebuild_list()
-
-            elif op == opcode.LIST_PRIVATE_CHANNELS:
-                self.channel_manager.add_open_private_channels(json_message)
-                continue
-
-            elif op == opcode.LIST_OFFICAL_CHANNELS:
-                self.channel_manager.add_official_channels(json_message)
-                continue
 
     async def periodic_worker(self) -> None:
         interval = 300  # 5 minutes
@@ -278,7 +203,7 @@ def main() -> None:
     comm = Communication(config)
 
     app.config_obj = config
-    app.comm = comm
+    app.set_comm(comm)
 
     app.run()
 

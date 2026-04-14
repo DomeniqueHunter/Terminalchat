@@ -10,7 +10,7 @@ from typing import Deque, Optional, Tuple
 COMM_ERROR = "__ERROR"
 
 
-def prettify(op:str="", message:str="") -> tuple:
+def prettify(op:str="", message:str="{}") -> tuple:
     return op, message
 
 
