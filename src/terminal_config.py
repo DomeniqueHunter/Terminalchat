@@ -52,9 +52,16 @@ CHANNELS_CSS = """
     }
 
     Input {
+        padding: 0;
+    }
+    
+    """
+
+"""
+Input {
         height: 1;
         padding: 0;
         color: white;
         background: $surface;
     }
-    """
+"""

@@ -56,7 +56,7 @@ class ChatApp(App):
                 self.chat_view = VerticalScroll(id="chat_view")
                 yield self.chat_view
 
-                yield Input(placeholder="Type message...")
+                yield Input(placeholder="Type message...", id="chat_input")
 
         yield Footer()
 
@@ -142,8 +142,10 @@ class ChatApp(App):
             self.chat_view.remove_children()
             self.chat_view.mount(Static("No chats"))
 
-    async def handle_input(self, text: str) -> None:
+    async def handle_chat_input(self, text: str) -> None:
         await asyncio.sleep(0)
+
+        logging("debug.log", f"handle input main: {text}\n")
 
         if not self.active_chat:
             return
@@ -194,12 +196,10 @@ class ChatApp(App):
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
 
-        if text:
-            await self.handle_input(text)
+        if text and event.input.id == "chat_input":
+            await self.handle_chat_input(text)
 
-        event.input.value = ""
-
-    
+        event.input.value = ""   
 
 
 def main() -> None:
