@@ -1,6 +1,6 @@
-from api import get_ticket
-# from framework.lib.config import Config
-from opcodes import Opcode as opcode
+from .api import get_ticket
+from .opcodes import Opcode as opcode
+
 import json
 import websockets.client
 import asyncio

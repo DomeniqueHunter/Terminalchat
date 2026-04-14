@@ -12,11 +12,12 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
 
-from opcodes import Opcode as opcode
 from terminal_config import CSS, BINDINGS
 from config import Config
-from communication import Communication
-from channels import ChannelManager
+
+from fchat import Opcode as opcode
+from fchat import Communication
+from fchat import ChannelManager
 
 
 class ChatApp(App):
@@ -67,19 +68,20 @@ class ChatApp(App):
         await self.comm.start_receiver()
 
         self.run_worker(self.receiver_consumer(), exclusive=False)
+        self.run_worker(self.periodic_worker(), exclusive=False)
 
     async def receiver_consumer(self) -> None:
         while True:
             op, json_message = await self.comm.receive()
 
-            if op == "PIN":
+            if op == opcode.PING:
                 await self.comm.priority_message(opcode="PIN")
                 continue
 
             data = json.loads(json_message)
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            if op == "PRI":
+            if op == opcode.PRIVATE_MESSAGE:
                 user = data.get("character")
                 message = (data.get("message") or "").strip()
 
@@ -111,7 +113,7 @@ class ChatApp(App):
 
                 self.rebuild_list()
 
-            elif op == "MSG":
+            elif op == opcode.CHANNEL_MESSAGE:
                 room = data.get("room")
                 message = (data.get("message") or "").strip()
 
@@ -140,13 +142,29 @@ class ChatApp(App):
                     self.chat_view.scroll_end()
 
                 self.rebuild_list()
-            elif op == "ORS":
+
+            elif op == opcode.LIST_PRIVATE_CHANNELS:
                 self.channel_manager.add_open_private_channels(json_message)
                 continue
 
-            elif op == "CHA":
+            elif op == opcode.LIST_OFFICAL_CHANNELS:
                 self.channel_manager.add_official_channels(json_message)
                 continue
+
+    async def periodic_worker(self) -> None:
+        interval = 300  # 5 minutes
+
+        while True:
+            await asyncio.sleep(interval)
+
+            try:
+                # todo: update channel lists
+                await self.message(opcode.LIST_OFFICAL_CHANNELS)
+                await self.message(opcode.LIST_PRIVATE_CHANNELS)
+                pass
+
+            except Exception as e:
+                print(f"periodic worker error: {e}")
 
     def rebuild_list(self) -> None:
         self.list_view.clear()

@@ -2,7 +2,7 @@ import requests
 import json
 import time
 
-from httpclient import HTTPClient
+from .httpclient import HTTPClient
 
 
 async def get_ticket(account:str, password:str, try_nr:int=0, max_trys:int=10) -> str:
