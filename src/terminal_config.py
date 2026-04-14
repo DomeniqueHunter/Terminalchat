@@ -33,7 +33,7 @@ APP_CSS = """
     """
 
 CHANNELS_CSS = """
-    ChatSelector {
+    ChannelsList {
         align: center middle;
     }
 
@@ -49,5 +49,10 @@ CHANNELS_CSS = """
         width: 1fr;
         border: solid green;
         padding: 1;
+    }
+
+    Input {
+        height: 1;
+        padding: 0;
     }
     """

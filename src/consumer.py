@@ -33,8 +33,6 @@ class Consumer:
             op, json_message = await self.comm.receive()
 
             data = json.loads(json_message)
-            if op == opcode.LIST_OFFICAL_CHANNELS:
-                logging("debug.log", f"{op}\n")
             # logging("debug.log", f"{op}: {json_message}\n")
             
             if op:
