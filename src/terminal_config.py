@@ -1,11 +1,11 @@
 
-BINDINGS = [
+APP_BINDINGS = [
         ("ctrl+x", "close_chat", "Close chat"),
         ("ctrl+c", "open_channels_list", "Channels List")
     ]
 
 
-CSS = """
+APP_CSS = """
     #main {
         layout: horizontal;
         height: 1fr;
@@ -29,5 +29,25 @@ CSS = """
 
     ListItem {
         height: 1;
+    }
+    """
+
+CHANNELS_CSS = """
+    ChatSelector {
+        align: center middle;
+    }
+
+    #container {
+        width: 80%;
+        height: 70%;
+        background: $panel;
+        border: solid white;
+        layout: horizontal;
+    }
+
+    .panel {
+        width: 1fr;
+        border: solid green;
+        padding: 1;
     }
     """

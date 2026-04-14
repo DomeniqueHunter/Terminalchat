@@ -33,7 +33,9 @@ class Consumer:
             op, json_message = await self.comm.receive()
 
             data = json.loads(json_message)
-            logging("debug.log", f"{op}: {json_message}\n")
+            if op == opcode.LIST_OFFICAL_CHANNELS:
+                logging("debug.log", f"{op}\n")
+            # logging("debug.log", f"{op}: {json_message}\n")
             
             if op:
                 await self.opcode_handler.react(op, data)
@@ -106,10 +108,12 @@ class Consumer:
         self.chat_client.rebuild_list()
 
     async def list_private_channels_handler(self, data:dict):
-        self.chat_client.channel_manager.add_open_private_channels(json_message)
+        logging("debug.log", f"update private channels\n")
+        self.chat_client.channel_manager.add_open_private_channels(data)
 
     async def list_official_channels_handler(self, data:dict):
-        self.chat_client.channel_manager.add_official_channels(json_message)
+        logging("debug.log", f"update official channels\n")
+        self.chat_client.channel_manager.add_official_channels(data)
     
     async def __defaultException(self, data:dict):
         pass

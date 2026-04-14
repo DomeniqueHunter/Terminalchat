@@ -88,9 +88,8 @@ class ChannelManager(object):
 
         self.join_method = join_method
 
-    def add_open_private_channels(self, json_object:str) -> None:
+    def add_open_private_channels(self, data:dict) -> None:
         start = time.time()
-        data = json.loads(json_object)
 
         for channel_data in data["channels"]:
             code = channel_data["name"]
@@ -102,9 +101,8 @@ class ChannelManager(object):
         elapsed = time.time() - start
         print(f"open private channels ({len(self.open_private_channels)}) in {elapsed}s")
 
-    def add_official_channels(self, json_object:str) -> None:
+    def add_official_channels(self, data:dict) -> None:
         start = time.time()
-        data = json.loads(json_object)
 
         for channel_data in data["channels"]:
             name = channel_data["name"]

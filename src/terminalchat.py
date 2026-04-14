@@ -12,18 +12,21 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
 
-from terminal_config import CSS, BINDINGS
+from terminal_config import APP_CSS, APP_BINDINGS
 from config import Config
 from consumer import Consumer
+from chat_log import logging
 
 from fchat import Opcode as opcode
 from fchat import Communication
 from fchat import ChannelManager
 
+from panels.channels_list_panel import ChannelsList
+
 
 class ChatApp(App):
-    BINDINGS = BINDINGS
-    CSS = CSS
+    BINDINGS = APP_BINDINGS
+    CSS = APP_CSS
 
     def __init__(self) -> None:
         super().__init__()
@@ -77,18 +80,17 @@ class ChatApp(App):
 
     async def periodic_worker(self) -> None:
         interval = 300  # 5 minutes
-
+        logging("debug.log", f"periodic worker started\n")
         while True:
-            await asyncio.sleep(interval)
-
             try:
-                # todo: update channel lists
-                await self.message(opcode.LIST_OFFICAL_CHANNELS)
-                await self.message(opcode.LIST_PRIVATE_CHANNELS)
-                pass
+                logging("debug.log", f"requesting channels\n")
+                await self.comm.message(opcode.LIST_OFFICAL_CHANNELS)
+                await self.comm.message(opcode.LIST_PRIVATE_CHANNELS)
 
             except Exception as e:
                 print(f"periodic worker error: {e}")
+
+            await asyncio.sleep(interval)
 
     def rebuild_list(self) -> None:
         self.list_view.clear()
@@ -121,6 +123,9 @@ class ChatApp(App):
 
         if 0 <= event.index < len(visible):
             self.open_chat(visible[event.index])
+    
+    def action_open_channels_list(self) -> None:
+        self.push_screen(ChannelsList(self))
 
     def action_close_chat(self) -> None:
         if not self.active_chat:
@@ -193,6 +198,8 @@ class ChatApp(App):
             await self.handle_input(text)
 
         event.input.value = ""
+
+    
 
 
 def main() -> None:
