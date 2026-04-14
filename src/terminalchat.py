@@ -28,7 +28,6 @@ class ChatApp(App):
     def __init__(self) -> None:
         super().__init__()
 
-        # chat storage: target -> messages (structured)
         self.chats: Dict[str, List[dict]] = {}
         self.channel_manager = ChannelManager()
 
