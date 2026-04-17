@@ -5,7 +5,6 @@ from textual.containers import Horizontal, Vertical
 
 from terminal_config import CHANNELS_CSS
 from fchat import Opcode as opcode
-
 from chat_log import logging
 
 
@@ -67,27 +66,31 @@ class ChannelsList(ModalScreen):
                 self.private_list.append(item)
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        logging("debug.log", f"channel: {event.item.channel.name} {event.item.channel.code}\n")
-
         channel = event.item.channel
-
-        if channel:
-            self.call_later(lambda: self._join(channel.code))
+        self.call_later(lambda: self._join(channel))
 
     async def _join(self, channel) -> None:
         logging("debug.log", f"join: {channel}\n")
 
         await self.join_channel(channel)
+
+        key = channel.name if hasattr(channel, "name") else str(channel)
+
+        if self.main:
+            self.main.chats.setdefault(key, [])
+
+            if hasattr(self.main, "rebuild_list"):
+                self.main.rebuild_list()
+
+            if hasattr(self.main, "open_chat"):
+                self.main.open_chat(key)
+
         self.app.pop_screen()
 
     async def join_channel(self, channel) -> None:
         if self.main:
-            payload = {"channel": getattr(channel, "code", str(channel))}
+            payload = {"channel": channel.code}
             await self.main.comm.message(opcode.JOIN_CHANNEL, payload)
-
-            if hasattr(self.main, "chats"):
-                key = channel.name if hasattr(channel, "name") else str(channel)
-                self.main.chats.setdefault(key, [])
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         value = event.value.strip()

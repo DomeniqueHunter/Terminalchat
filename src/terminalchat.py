@@ -104,13 +104,18 @@ class ChatApp(App):
 
             self.list_view.append(ListItem(Static(chat)))
 
-    def open_chat(self, chat: str) -> None:
+    def open_chat(self, chat: str, chat_type:str="user") -> None:
         self.active_chat = chat
 
         self.chat_view.remove_children()
 
-        base_path = Path("chats") / str(self.config_obj.get("character")) / str(chat)
-        log_file = base_path / "chat.log"
+        if chat_type == "user":
+            base_path = Path("chats") / str(self.config_obj.get("character")) / str(chat)
+            log_file = base_path / "chat.log"
+        else:
+            # channel
+            base_path = Path("chats") / str(self.config_obj.get("character")) / str("channels") / str(chat)
+            log_file = base_path / "chat.log"
 
         if log_file.exists():
             with open(log_file, "r", encoding="utf-8") as f:
@@ -167,7 +172,7 @@ class ChatApp(App):
         base_path.mkdir(parents=True, exist_ok=True)
         log_file = base_path / "chat.log"
 
-        is_channel = target.startswith("#")  # falls du später anders entscheidest
+        is_channel = target.startswith("#")
 
         if is_channel:
             opcode_used = opcode.CHANNEL_MESSAGE
