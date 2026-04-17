@@ -75,42 +75,40 @@ class Consumer:
         self.chat_client.rebuild_list()
 
     async def public_message_handler(self, data:dict):
-        room = data.get("room")
+        channel_id = data.get("channel")
         message = (data.get("message") or "").strip()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if room not in self.chat_client.chats:
-            self.chat_client.chats[room] = []
+        if channel_id not in self.chat_client.chats:
+            self.chat_client.chats[channel_id] = []
 
-        if room in self.chat_client.closed:
-            self.chat_client.closed.remove(room)
+        if channel_id in self.chat_client.closed:
+            self.chat_client.closed.remove(channel_id)
 
         formatted_message = f"[{timestamp}] {message}"
 
-        self.chat_client.chats[room].append({
+        self.chat_client.chats[channel_id].append({
             "type": "MSG",
             "text": formatted_message
         })
 
-        base_path = Path("chats") / str(self.chat_client.config_obj.get("character")) / str(room)
+        base_path = Path("chats") / str(self.chat_client.config_obj.get("character")) / "channels" / str(channel_id)
         base_path.mkdir(parents=True, exist_ok=True)
         log_file = base_path / "chat.log"
 
         with open(log_file, "a", encoding="utf-8") as f:
             f.write(f"{formatted_message}\n")
 
-        if room == self.chat_client.active_chat:
+        if channel_id == self.chat_client.active_chat:
             self.chat_client.chat_view.mount(Static(formatted_message))
             self.chat_client.chat_view.scroll_end()
 
         self.chat_client.rebuild_list()
 
     async def list_private_channels_handler(self, data:dict):
-        logging("debug.log", f"update private channels\n")
         self.chat_client.channel_manager.add_open_private_channels(data)
 
     async def list_official_channels_handler(self, data:dict):
-        logging("debug.log", f"update official channels\n")
         self.chat_client.channel_manager.add_official_channels(data)
     
     async def __defaultException(self, data:dict):

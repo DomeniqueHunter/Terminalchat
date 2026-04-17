@@ -83,10 +83,9 @@ class ChatApp(App):
 
     async def periodic_worker(self) -> None:
         interval = 300  # 5 minutes
-        logging("debug.log", f"periodic worker started\n")
         while True:
             try:
-                logging("debug.log", f"requesting channels\n")
+                # logging("debug.log", f"requesting channels\n")
                 await self.comm.message(opcode.LIST_OFFICAL_CHANNELS)
                 await self.comm.message(opcode.LIST_PRIVATE_CHANNELS)
 
@@ -153,7 +152,7 @@ class ChatApp(App):
     async def handle_chat_input(self, text: str) -> None:
         await asyncio.sleep(0)
 
-        logging("debug.log", f"handle input main: {text}\n")
+        # logging("debug.log", f"handle input main: {text}\n")
 
         if text.startswith("/"):
             await self.commands.handle(text)
