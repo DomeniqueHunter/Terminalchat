@@ -21,6 +21,8 @@ from fchat import Opcode as opcode
 from fchat import Communication
 from fchat import ChannelManager
 
+from chat_commands import ChatCommands
+
 from panels.channels_list_panel import ChannelsList
 
 
@@ -40,6 +42,7 @@ class ChatApp(App):
         self.config_obj = None
         self.comm = None
         self.consumer = Consumer(self)
+        self.commands = ChatCommands(self)
     
     def set_comm(self, comm:Communication):
         self.comm = comm
@@ -146,6 +149,10 @@ class ChatApp(App):
         await asyncio.sleep(0)
 
         logging("debug.log", f"handle input main: {text}\n")
+
+        if text.startswith("/"):
+            await self.commands.handle(text)
+            return
 
         if not self.active_chat:
             return
