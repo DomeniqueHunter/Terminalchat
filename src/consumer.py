@@ -60,6 +60,8 @@ class Consumer:
 
             try:
                 data = json.loads(raw) if raw else {}
+                if isinstance(data, dict) and isinstance(data.get("channel"), str):
+                    data["channel"] = self.client.canonical_channel(data["channel"])
                 await handler(data)
             except Exception as error:
                 logging("debug.log", f"{op} handler failed: {error!r} raw={raw}\n")
@@ -80,8 +82,11 @@ class Consumer:
         message = data.get("message", "")
         if "channel" in data:
             await self.client.on_channel_message(data["channel"], "System", message)
-        elif not self.client.is_me(data.get("character")):
-            await self.client.on_private_message(data["character"], message)
+        else:
+            character = data.get("character", "")
+            partner = data.get("recipient", "") if self.client.is_me(character) else character
+            if partner:
+                await self.client.on_private_system(partner, message)
 
     async def on_official_channels(self, data:dict) -> None:
         self.client.channel_manager.add_official_channels(data)

@@ -54,6 +54,12 @@ class Client:
     def is_me(self, name:str | None) -> bool:
         return bool(name) and name.lower() == self.character.lower()
 
+    def canonical_channel(self, code:str) -> str:
+        known = list(self.channel_manager.joined_channels) + list(self.joining) + list(self.pending_open)
+        known += [chat.key for chat in self.store.chats.values() if chat.kind == CHANNEL]
+        lowered = code.lower()
+        return next((key for key in known if key.lower() == lowered), code)
+
     def channel_title(self, code:str) -> str | None:
         channel = self.channel_manager.joined_channels.get(code) or self.channel_manager.find_channel_by_id(code)
         return channel.name if channel else None
@@ -151,6 +157,18 @@ class Client:
         chat_id = make_id(CHANNEL, code)
         self.store.remove(chat_id)
         await self.app.chat_removed(chat_id)
+
+    async def roll(self, chat:Chat, dice:str) -> None:
+        if chat.kind == CHANNEL:
+            payload = {"channel": chat.key, "dice": dice}
+        else:
+            payload = {"recipient": chat.key, "dice": dice}
+        await self.comm.message(opcode.ROLL, payload)
+
+    async def on_private_system(self, partner:str, message:str) -> None:
+        chat = self.store.get_or_create(partner, USER)
+        line = self.store.append(chat, "System", message)
+        await self.app.show_line(chat.id, line)
 
     async def on_private_message(self, sender:str, message:str) -> None:
         chat = self.store.get_or_create(sender, USER)

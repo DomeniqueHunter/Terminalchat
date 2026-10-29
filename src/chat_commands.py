@@ -1,8 +1,14 @@
 import asyncio
 import os
+import re
 from typing import Any, Awaitable, Callable
 
+from chat_store import CHANNEL
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
+
+
+DEFAULT_DICE = "1d6"
+DICE_PATTERN = re.compile(r"^(\d*d\d+|\d+)([+-](\d*d\d+|\d+))*$")
 
 
 COMMAND_INFO = [
@@ -10,6 +16,8 @@ COMMAND_INFO = [
     ("leave", "", "leave / close the current chat"),
     ("priv", "<name>", "open a private chat"),
     ("me", "<text>", "emote in the current chat"),
+    ("roll", "[dice]", "roll dice on the server, e.g. 2d6+3 (default 1d6)"),
+    ("bottle", "", "spin the bottle (channels only)"),
     ("status", "[status] [text]", "set status and/or status message"),
     ("status:flag", "<status>", "change only the status"),
     ("status:message", "[text]", "change only the message (empty clears it)"),
@@ -58,6 +66,8 @@ class ChatCommands:
             "close": self.cmd_leave,
             "priv": self.cmd_priv,
             "me": self.cmd_me,
+            "roll": self.cmd_roll,
+            "bottle": self.cmd_bottle,
             "status": self.cmd_status,
             "status:flag": self.cmd_status_flag,
             "status:message": self.cmd_status_message,
@@ -107,6 +117,24 @@ class ChatCommands:
         if chat is None or not args:
             return
         await self.client.send(chat, f"/me {args}")
+
+    async def cmd_roll(self, args:str) -> None:
+        chat = self.app.current_chat()
+        if chat is None:
+            self.app.notify("No chat open", severity="warning")
+            return
+        dice = args.replace(" ", "").lower() or DEFAULT_DICE
+        if not DICE_PATTERN.match(dice):
+            self.app.notify(f"Invalid dice '{args.strip()}', e.g. /roll 1d20 or /roll 2d6+3", severity="warning")
+            return
+        await self.client.roll(chat, dice)
+
+    async def cmd_bottle(self, args:str) -> None:
+        chat = self.app.current_chat()
+        if chat is None or chat.kind != CHANNEL:
+            self.app.notify("/bottle only works in channels", severity="warning")
+            return
+        await self.client.roll(chat, "bottle")
 
     async def cmd_pin(self, args:str) -> None:
         chat = self.app.current_chat()
