@@ -6,6 +6,9 @@ from pathlib import Path
 
 from rich.text import Text
 
+from bbcode import to_text
+from color_config import SENDER_STYLE
+
 
 USER = "user"
 CHANNEL = "channel"
@@ -98,9 +101,9 @@ def format_line(sender:str, message:str) -> str:
 def render_line(line:str) -> Text:
     match = LINE_PATTERN.match(line)
     if not match:
-        return Text(line)
+        return to_text(line)
     timestamp, sender, message = match.groups()
-    return Text.assemble(f"{timestamp} ", (sender, "bold"), f": {message}")
+    return Text.assemble(f"{timestamp} ", (sender, SENDER_STYLE), ": ", to_text(message))
 
 
 def main() -> None:
