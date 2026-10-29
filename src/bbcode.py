@@ -4,7 +4,7 @@ from rich.style import Style
 from rich.text import Text
 
 from color_config import (BBCODE_COLORS, EICON_STYLE, ICON_STYLE, SPOILER_STYLE,
-                          URL_STYLE, USER_STYLE)
+                          URL_STYLE, USER_STYLE, make_style)
 
 
 TAG_PATTERN = re.compile(r"\[(/?)([a-zA-Z]+)(?:=([^\]]*))?\]")
@@ -16,7 +16,7 @@ SIMPLE_STYLES = {
     "s": Style(strike=True),
     "sub": Style(dim=True),
     "sup": Style(dim=True),
-    "spoiler": Style.parse(SPOILER_STYLE),
+    "spoiler": make_style(SPOILER_STYLE),
 }
 
 CONTENT_TAGS = {"user", "icon", "eicon", "url", "noparse"}
@@ -27,21 +27,21 @@ def tag_style(name:str, value:str | None) -> Style | None:
         return SIMPLE_STYLES[name]
     if name == "color" and value:
         color = BBCODE_COLORS.get(value.lower())
-        return Style.parse(color) if color else Style()
+        return make_style(color) if color else Style()
     return None
 
 
 def render_content_tag(text:Text, name:str, value:str | None, content:str, base:Style) -> None:
     if name == "user":
-        text.append(content, base + Style.parse(USER_STYLE))
+        text.append(content, base + make_style(USER_STYLE))
     elif name == "icon":
-        text.append(f"[{content}]", base + Style.parse(ICON_STYLE))
+        text.append(f"[{content}]", base + make_style(ICON_STYLE))
     elif name == "eicon":
-        text.append(f":{content}:", base + Style.parse(EICON_STYLE))
+        text.append(f":{content}:", base + make_style(EICON_STYLE))
     elif name == "url":
         url = value or content
         label = content or url
-        text.append(label, base + Style.parse(URL_STYLE) + Style(link=url))
+        text.append(label, base + make_style(URL_STYLE) + Style(link=url))
     else:
         text.append(content, base)
 
