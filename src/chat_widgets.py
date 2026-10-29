@@ -1,8 +1,13 @@
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.events import Click
 from textual.binding import Binding
-from textual.widgets import Input, Static
+from textual.content import Content
+from textual.css.query import NoMatches
+from textual.dom import NoScreen
+from textual.widgets import Header, Input, Static
+from textual.widgets._header import HeaderTitle
 
 from animated_eicon import make_eicon_widget
 from bbcode import to_text
@@ -126,3 +131,33 @@ class HistoryInput(Input):
             self.set_text(self.draft)
         else:
             self.set_text(self.history[self.position])
+
+
+class StatusHeader(Header):
+
+    DEFAULT_CSS = """
+    StatusHeader HeaderTitle {
+        text-align: center;
+    }
+    """
+
+    def _on_click(self, event:Click) -> None:
+        event.prevent_default()
+        self.toggle_class("-tall")
+        self.refresh_title()
+
+    def refresh_title(self) -> None:
+        try:
+            self.query_one(HeaderTitle).update(self.format_title())
+        except (NoScreen, NoMatches):
+            pass
+
+    def format_title(self) -> Content:
+        title = super().format_title()
+        if not self.has_class("-tall"):
+            return title
+        status_message = getattr(self.app, "status_message", None)
+        message = status_message() if status_message else ""
+        if not message:
+            return Content.assemble(title, "\n", Content("(no status message)").stylize("dim"))
+        return Content.assemble(title, "\n", Content.from_rich_text(to_text(message, False)))

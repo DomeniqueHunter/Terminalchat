@@ -12,6 +12,8 @@ HELP_TEXT = (
     "/me <text>        emote in the current chat\n"
     "/status [s] [msg] set status (online looking busy dnd idle away)\n"
     "/status <text>    set only the status message\n"
+    "/status:flag <s>  change only the status\n"
+    "/status:message [text]  change only the message (empty clears it)\n"
     "/pin, /unpin      (un)pin the current chat, restored on start\n"
     "/pins             show pinned chats\n"
     "/gif [on|off]     toggle animated eicons\n"
@@ -42,6 +44,8 @@ class ChatCommands:
             "priv": self.cmd_priv,
             "me": self.cmd_me,
             "status": self.cmd_status,
+            "status:flag": self.cmd_status_flag,
+            "status:message": self.cmd_status_message,
             "channels": self.cmd_channels,
             "users": self.cmd_users,
             "pin": self.cmd_pin,
@@ -170,10 +174,27 @@ class ChatCommands:
             status, message = first.lower(), rest.strip()
         else:
             status, message = own.status, args.strip()
+        await self.apply_status(status, message)
+
+    async def cmd_status_flag(self, args:str) -> None:
+        own = self.client.own_status
+        status = args.strip().lower()
+        if not status:
+            self.app.notify(f"Status {own.status}\nUsage: /status:flag <{'|'.join(VALID_STATUSES)}>", title="Status", timeout=8)
+            return
+        if status not in VALID_STATUSES:
+            self.app.notify(f"Unknown status '{status}', use one of: {', '.join(VALID_STATUSES)}", severity="warning")
+            return
+        await self.apply_status(status, own.message)
+
+    async def cmd_status_message(self, args:str) -> None:
+        await self.apply_status(self.client.own_status.status, args.strip())
+
+    async def apply_status(self, status:str, message:str) -> None:
         if len(message) > MAX_MESSAGE_LENGTH:
             self.app.notify(f"Status message too long ({len(message)}/{MAX_MESSAGE_LENGTH})", severity="warning")
             return
-        own.set(status, message)
+        self.client.own_status.set(status, message)
         if self.app.online:
             await self.client.send_status()
             self.app.update_subtitle()

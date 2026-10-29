@@ -115,6 +115,8 @@ Names and channel titles containing spaces work without quotes (`/priv Domenique
 | `ctrl+q` | Quit |
 | `escape` | Close a dialog |
 
+The title bar shows your status and character (`Terminal Chat — looking — as <character>`). Click it to expand it and show your status message below; click again to collapse it.
+
 In the chat list on the left, channels (`#`) are listed above private chats (`@`). A `*` marks unread messages, a `+` marks pinned chats.
 
 The sidebar on the right has two tabs: *Friends* lists your friends that are online, *Channel* lists the users of the open channel (channel operators first, marked with `@`). It switches to the matching tab when you change chats. Press `enter` on a name to open a private chat. Status symbols: `+` looking, `•` online, `~` idle/away, `-` busy, `x` do not disturb.
