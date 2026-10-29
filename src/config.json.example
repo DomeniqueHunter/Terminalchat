@@ -6,5 +6,7 @@
 	"server"    : "chat.f-list.net",
 	"endpoint"  : "/chat2",
 	"port"      : 8722,
-	"default_channels": ["Development"]
+	"default_channels": ["Development"],
+	"eicons"    : "inline",
+	"eicon_height": 4
 }

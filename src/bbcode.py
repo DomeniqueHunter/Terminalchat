@@ -5,6 +5,7 @@ from rich.text import Text
 
 from color_config import (BBCODE_COLORS, EICON_STYLE, ICON_STYLE, SPOILER_STYLE,
                           URL_STYLE, USER_STYLE, make_style)
+from eicons import eicon_url
 
 
 TAG_PATTERN = re.compile(r"\[(/?)([a-zA-Z]+)(?:=([^\]]*))?\]")
@@ -31,13 +32,15 @@ def tag_style(name:str, value:str | None) -> Style | None:
     return None
 
 
-def render_content_tag(text:Text, name:str, value:str | None, content:str, base:Style) -> None:
+def render_content_tag(text:Text, name:str, value:str | None, content:str, base:Style, show_eicons:bool) -> None:
     if name == "user":
         text.append(content, base + make_style(USER_STYLE))
     elif name == "icon":
         text.append(f"[{content}]", base + make_style(ICON_STYLE))
     elif name == "eicon":
-        text.append(f":{content}:", base + make_style(EICON_STYLE))
+        if not show_eicons:
+            return
+        text.append(f":{content}:", base + make_style(EICON_STYLE) + Style(link=eicon_url(content)))
     elif name == "url":
         url = value or content
         label = content or url
@@ -51,7 +54,7 @@ def find_close(source:str, name:str, start:int) -> int:
     return match.start() if match else -1
 
 
-def to_text(source:str) -> Text:
+def to_text(source:str, show_eicons:bool=True) -> Text:
     text = Text()
     stack: list[tuple[str, Style]] = []
     position = 0
@@ -75,7 +78,7 @@ def to_text(source:str) -> Text:
         if not closing and name in CONTENT_TAGS:
             end = find_close(source, name, position)
             if end >= 0:
-                render_content_tag(text, name, value, source[position:end], current())
+                render_content_tag(text, name, value, source[position:end], current(), show_eicons)
                 position = end + len(name) + 3
                 continue
             text.append(match.group(0), current())

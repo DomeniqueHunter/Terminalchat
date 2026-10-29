@@ -7,9 +7,11 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
 
-from chat_store import CHANNEL, Chat, render_line
+from chat_store import CHANNEL, Chat
+from chat_widgets import ChatLine
 from client import Client
 from config import Config
+from eicons import EiconCache
 from panels.channels_list_panel import ChannelsList
 from terminal_config import APP_BINDINGS, APP_CSS
 
@@ -25,6 +27,8 @@ class ChatApp(App):
     def __init__(self, config:Config) -> None:
         super().__init__()
         self.client = Client(config, self)
+        self.eicons = EiconCache() if config.get("eicons", "inline") == "inline" else None
+        self.eicon_height = int(config.get("eicon_height", 4))
         self.active_chat: str | None = None
         self.list_ids: list[str | None] = []
 
@@ -56,6 +60,8 @@ class ChatApp(App):
 
     async def on_unmount(self) -> None:
         await self.client.stop()
+        if self.eicons is not None:
+            await self.eicons.close()
 
     async def start_backend(self) -> None:
         if not await self.client.start():
@@ -88,6 +94,9 @@ class ChatApp(App):
     def channel_lists_updated(self) -> None:
         if isinstance(self.screen, ChannelsList):
             self.screen.run_worker(self.screen.render_lists(), exclusive=True)
+
+    def chat_line(self, line:str) -> ChatLine:
+        return ChatLine(line, self.eicons, self.eicon_height)
 
     def first_chat_id(self) -> str | None:
         chats = list(self.client.store.chats.values())
@@ -132,7 +141,7 @@ class ChatApp(App):
 
         await self.chat_view.remove_children()
         lines = self.client.store.history(chat)
-        widgets = [Static(render_line(line)) for line in lines] or [Static("No messages yet", classes="placeholder")]
+        widgets = [self.chat_line(line) for line in lines] or [Static("No messages yet", classes="placeholder")]
         await self.chat_view.mount_all(widgets)
         self.chat_view.scroll_end(animate=False)
         await self.rebuild_list()
@@ -140,7 +149,7 @@ class ChatApp(App):
     async def show_line(self, chat_id:str, line:str) -> None:
         if chat_id == self.active_chat:
             await self.chat_view.query(".placeholder").remove()
-            await self.chat_view.mount(Static(render_line(line)))
+            await self.chat_view.mount(self.chat_line(line))
             self.chat_view.scroll_end(animate=False)
             return
         chat = self.client.store.get(chat_id)

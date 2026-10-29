@@ -2,3 +2,5 @@ textual
 aiohttp
 requests
 websockets
+textual-image
+pillow

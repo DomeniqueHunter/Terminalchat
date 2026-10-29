@@ -7,13 +7,15 @@ from pathlib import Path
 from rich.text import Text
 
 from bbcode import to_text
-from color_config import SENDER_STYLE
+from color_config import SENDER_STYLE, make_style
 
 
 USER = "user"
 CHANNEL = "channel"
 
-LINE_PATTERN = re.compile(r"^(\[[^\]]*\]) (.+?): (.*)$")
+LINE_PATTERN = re.compile(r"^(\[[^\]]*\]) ([^\n]+?): (.*)$", re.DOTALL)
+CONTINUATION = "\t"
+ENTRY_START = re.compile(r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] ")
 
 
 def make_id(kind:str, key:str) -> str:
@@ -76,21 +78,27 @@ class ChatStore:
         path = self.log_path(chat)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "a", encoding="utf-8") as file:
-            file.write(f"{line}\n")
+            file.write(line.replace("\n", "\n" + CONTINUATION) + "\n")
         return line
 
     def history(self, chat:Chat, limit:int=300) -> list[str]:
         path = self.log_path(chat)
         if not path.exists():
             return []
+        lines: list[str] = []
         with open(path, "r", encoding="utf-8") as file:
-            lines = [line.rstrip("\n") for line in file]
+            for raw in file:
+                raw = raw.rstrip("\n")
+                if lines and not ENTRY_START.match(raw):
+                    lines[-1] += "\n" + raw.removeprefix(CONTINUATION)
+                else:
+                    lines.append(raw)
         return lines[-limit:]
 
 
 def format_line(sender:str, message:str) -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    message = html.unescape(message).strip()
+    message = html.unescape(message).replace("\r\n", "\n").replace("\r", "\n").strip()
     if message.startswith("/me "):
         return f"[{timestamp}] * {sender} {message[4:]}"
     if message.startswith("/me's "):
@@ -98,12 +106,17 @@ def format_line(sender:str, message:str) -> str:
     return f"[{timestamp}] {sender}: {message}"
 
 
-def render_line(line:str) -> Text:
+def split_line(line:str) -> tuple[Text, str]:
     match = LINE_PATTERN.match(line)
     if not match:
-        return to_text(line)
+        return Text(), line
     timestamp, sender, message = match.groups()
-    return Text.assemble(f"{timestamp} ", (sender, SENDER_STYLE), ": ", to_text(message))
+    return Text.assemble(f"{timestamp} ", (sender, make_style(SENDER_STYLE)), ": "), message
+
+
+def render_line(line:str, show_eicons:bool=True) -> Text:
+    header, message = split_line(line)
+    return Text.assemble(header, to_text(message, show_eicons))
 
 
 def main() -> None:
