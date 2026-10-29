@@ -2,12 +2,16 @@ import asyncio
 import os
 from typing import Any, Awaitable, Callable
 
+from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
+
 
 HELP_TEXT = (
     "/join <channel>   join a channel (name or code)\n"
     "/leave            leave / close the current chat\n"
     "/priv <name>      open a private chat\n"
     "/me <text>        emote in the current chat\n"
+    "/status [s] [msg] set status (online looking busy dnd idle away)\n"
+    "/status <text>    set only the status message\n"
     "/pin, /unpin      (un)pin the current chat, restored on start\n"
     "/pins             show pinned chats\n"
     "/gif [on|off]     toggle animated eicons\n"
@@ -37,6 +41,7 @@ class ChatCommands:
             "close": self.cmd_leave,
             "priv": self.cmd_priv,
             "me": self.cmd_me,
+            "status": self.cmd_status,
             "channels": self.cmd_channels,
             "users": self.cmd_users,
             "pin": self.cmd_pin,
@@ -152,6 +157,27 @@ class ChatCommands:
 
     async def cmd_users(self, args:str) -> None:
         self.app.action_toggle_sidebar()
+
+    async def cmd_status(self, args:str) -> None:
+        own = self.client.own_status
+        if not args:
+            message = f": {own.message}" if own.message else ""
+            self.app.notify(f"Status {own.status}{message}\nUsage: /status [{'|'.join(VALID_STATUSES)}] [message]",
+                            title="Status", timeout=8)
+            return
+        first, _, rest = args.partition(" ")
+        if first.lower() in VALID_STATUSES:
+            status, message = first.lower(), rest.strip()
+        else:
+            status, message = own.status, args.strip()
+        if len(message) > MAX_MESSAGE_LENGTH:
+            self.app.notify(f"Status message too long ({len(message)}/{MAX_MESSAGE_LENGTH})", severity="warning")
+            return
+        own.set(status, message)
+        if self.app.online:
+            await self.client.send_status()
+            self.app.update_subtitle()
+        self.app.notify(f"Status set to {status}" + (f": {message}" if message else ""))
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()

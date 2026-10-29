@@ -12,6 +12,7 @@ Features:
 - Eicons shown as (animated) images directly in the chat
 - Pinned chats that are restored on startup
 - Login screen and character switching
+- Status and status message, remembered per character
 - Input history (arrow keys)
 - Local chat logs per character
 - Respects `NO_COLOR`
@@ -91,6 +92,7 @@ Type commands into the input line.
 | `/pin` | Pin the current chat; pinned chats are restored on startup |
 | `/unpin` | Unpin the current chat |
 | `/pins` | Show all pinned chats |
+| `/status [status] [message]` | Set your status (`online`, `looking`, `busy`, `dnd`, `idle`, `away`) and an optional message (max. 255 characters). If the first word is not a status, the whole text becomes the message and the status is kept (`/status back in 5`); without arguments the current status is shown. The status is stored per character and restored after every login; `/status online` resets it |
 | `/gif [on\|off]` | Turn eicon animation on or off; without argument it toggles |
 | `/char [name]` | Switch character; without a name a character picker opens |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
@@ -144,6 +146,7 @@ Colors can be adjusted in `src/color_config.py`, including the gender colors (`G
 | `src/config.json` | Configuration and credentials (permissions `600`) |
 | `src/chats/<character>/` | Chat logs per character, private chats and `channels/` |
 | `src/chats/<character>/pins.json` | Pinned chats |
+| `src/chats/<character>/status.json` | Your status and status message |
 | `src/chats/genders.json` | Known genders of other characters, used for name colors |
 | `~/.cache/terminalchat/eicons/` | Eicon cache (respects `XDG_CACHE_HOME`) |
 | `src/debug.log` | Debug output |

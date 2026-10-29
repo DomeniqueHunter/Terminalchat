@@ -135,6 +135,11 @@ class ChatApp(App):
         self.sub_title = "offline"
         self.show_login()
 
+    def update_subtitle(self) -> None:
+        status = self.client.own_status.status
+        suffix = "" if status == "online" else f" [{status}]"
+        self.sub_title = f"online as {self.client.character}{suffix}"
+
     def save_genders(self) -> None:
         self.client.genders.save()
 
@@ -189,7 +194,8 @@ class ChatApp(App):
             return
 
         self.online = True
-        self.sub_title = f"online as {self.client.character}"
+        self.update_subtitle()
+        await self.client.restore_status()
         self.run_worker(self.client.consumer.receive(), group="receiver")
         self.run_worker(self.periodic_worker(), group="periodic")
 

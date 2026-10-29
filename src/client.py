@@ -10,6 +10,7 @@ from chat_store import CHANNEL, USER, Chat, ChatStore, make_id
 from config import Config
 from consumer import Consumer
 from genders import GenderStore
+from own_status import OwnStatus
 from pins import Pins
 from presence import Presence
 
@@ -29,6 +30,7 @@ class Client:
 
         self.pins = Pins(self.store.base / "pins.json")
         self.genders = GenderStore(self.store.base.parent / "genders.json")
+        self.own_status = OwnStatus(self.store.base / "status.json")
 
         self.pending_open: set[str] = set()
         self.joining: set[str] = set()
@@ -55,6 +57,14 @@ class Client:
     def channel_title(self, code:str) -> str | None:
         channel = self.channel_manager.joined_channels.get(code) or self.channel_manager.find_channel_by_id(code)
         return channel.name if channel else None
+
+    async def send_status(self) -> None:
+        payload = {"status": self.own_status.status, "statusmsg": self.own_status.message}
+        await self.comm.message(opcode.STATUS, payload)
+
+    async def restore_status(self) -> None:
+        if not self.own_status.is_default():
+            await self.send_status()
 
     async def request_channel_lists(self) -> None:
         await self.comm.message(opcode.LIST_OFFICAL_CHANNELS)
