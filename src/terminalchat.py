@@ -232,6 +232,9 @@ class ChatApp(App):
 
     async def periodic_worker(self) -> None:
         while True:
+            removed = self.client.store.cleanup(int(self.config.get("log_keep_days", 0)))
+            if removed:
+                await self.client.log_console(f"Removed {removed} old log files")
             await self.client.request_channel_lists()
             await asyncio.sleep(LIST_REFRESH_SECONDS)
 

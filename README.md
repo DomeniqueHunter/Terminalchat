@@ -117,6 +117,7 @@ These commands act on the open channel. The server decides whether you are allow
 
 | Command | Description |
 |---|---|
+| `/code` | Copy the open channel as `[session=Title]code[/session]` link to the clipboard (also shown as notification) |
 | `/makeroom <title>` | Create a private channel and open it (alias: `/create`) |
 | `/openroom` | List the private channel publicly |
 | `/closeroom` | Make the private channel invite-only again |
@@ -167,6 +168,7 @@ The sidebar on the right has two tabs: *Friends* lists your friends that are onl
 | `default_channels` | `[]` | Channels joined on every start |
 | `show_sidebar` | `false` | Show the sidebar on startup |
 | `show_ads` | `true` | Show ads in channels without an own `/ads` setting |
+| `log_keep_days` | `0` | Delete daily log files older than this many days (including today); `0` keeps everything |
 | `eicons` | `"inline"` | `"inline"` shows eicons as images, `"off"` shows them as `:name:` links |
 | `eicon_height` | `4` | Eicon height in text lines |
 | `eicon_animate` | `true` | Animate eicons on startup (see `/gif`) |
@@ -180,15 +182,18 @@ Colors can be adjusted in `src/color_config.py`, including the gender colors (`G
 | Path | Content |
 |---|---|
 | `src/config.json` | Configuration and credentials (permissions `600`) |
-| `src/chats/<character>/` | Chat logs per character, private chats and `channels/` |
+| `src/chats/<character>/<name>/YYYY-MM-DD.log` | Private chat logs, one file per day |
+| `src/chats/<character>/channels/<code>/YYYY-MM-DD.log` | Channel logs, one file per day |
 | `src/chats/<character>/pins.json` | Pinned chats |
-| `src/chats/<character>/console.log` | Console history |
+| `src/chats/<character>/_console/YYYY-MM-DD.log` | Console history, one file per day |
 | `src/chats/<character>/status.json` | Your status and status message |
 | `src/chats/<character>/ads.json` | Per-channel ad visibility |
 | `src/chats/genders.json` | Known genders of other characters, used for name colors |
 | `~/.cache/terminalchat/eicons/` | Eicon cache (respects `XDG_CACHE_HOME`) |
 | `src/debug.log` | Debug output |
 | `tmux.conf` | Settings for the launcher's tmux server |
+
+Older single-file logs (`chat.log`, `console.log`) are split into daily files automatically the first time a chat is opened; the original is kept as `chat.log.bak` / `console.log.bak` and can be deleted afterwards.
 
 ## Security note
 

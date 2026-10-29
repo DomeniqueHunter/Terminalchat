@@ -1,7 +1,7 @@
 import html
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from rich.text import Text
@@ -17,6 +17,8 @@ CONSOLE = "console"
 LINE_PATTERN = re.compile(r"^(\[[^\]]*\]) ([^\n]+?): (.*)$", re.DOTALL)
 CONTINUATION = "\t"
 ENTRY_START = re.compile(r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] ")
+DAY_FILE = re.compile(r"^\d{4}-\d{2}-\d{2}\.log$")
+CONSOLE_DIR = "_console"
 
 
 def make_id(kind:str, key:str) -> str:
@@ -40,6 +42,7 @@ class ChatStore:
     def __init__(self, character:str, base_dir:str="chats") -> None:
         self.base = Path(base_dir) / character
         self.chats: dict[str, Chat] = {}
+        self.migrated: set[str] = set()
 
     def get(self, chat_id:str) -> Chat | None:
         return self.chats.get(chat_id)
@@ -69,34 +72,93 @@ class ChatStore:
     def ids(self) -> list[str]:
         return list(self.chats.keys())
 
-    def log_path(self, chat:Chat) -> Path:
+    def log_dir(self, chat:Chat) -> Path:
+        if chat.kind == CONSOLE:
+            return self.base / CONSOLE_DIR
+        if chat.kind == CHANNEL:
+            return self.base / "channels" / chat.key
+        return self.base / chat.key
+
+    def legacy_log(self, chat:Chat) -> Path:
         if chat.kind == CONSOLE:
             return self.base / "console.log"
-        if chat.kind == CHANNEL:
-            return self.base / "channels" / chat.key / "chat.log"
-        return self.base / chat.key / "chat.log"
+        return self.log_dir(chat) / "chat.log"
+
+    def migrate(self, chat:Chat) -> None:
+        if chat.id in self.migrated:
+            return
+        self.migrated.add(chat.id)
+        legacy = self.legacy_log(chat)
+        if not legacy.exists():
+            return
+        fallback = datetime.fromtimestamp(legacy.stat().st_mtime).strftime("%Y-%m-%d")
+        groups: dict[str, list[str]] = {}
+        for entry in read_entries(legacy):
+            groups.setdefault(entry_date(entry) or fallback, []).append(entry)
+        directory = self.log_dir(chat)
+        directory.mkdir(parents=True, exist_ok=True)
+        for day, entries in groups.items():
+            path = directory / f"{day}.log"
+            existing = path.read_text(encoding="utf-8") if path.exists() else ""
+            tmp_path = path.with_suffix(".tmp")
+            tmp_path.write_text("".join(encode_entry(entry) for entry in entries) + existing, encoding="utf-8")
+            tmp_path.replace(path)
+        legacy.replace(legacy.with_name(legacy.name + ".bak"))
+
+    def day_files(self, chat:Chat) -> list[Path]:
+        directory = self.log_dir(chat)
+        if not directory.is_dir():
+            return []
+        return sorted(path for path in directory.iterdir() if DAY_FILE.match(path.name))
 
     def append(self, chat:Chat, sender:str, message:str) -> str:
+        self.migrate(chat)
         line = format_line(sender, message)
-        path = self.log_path(chat)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "a", encoding="utf-8") as file:
-            file.write(line.replace("\n", "\n" + CONTINUATION) + "\n")
+        directory = self.log_dir(chat)
+        directory.mkdir(parents=True, exist_ok=True)
+        with open(directory / f"{line[1:11]}.log", "a", encoding="utf-8") as file:
+            file.write(encode_entry(line))
         return line
 
     def history(self, chat:Chat, limit:int=300) -> list[str]:
-        path = self.log_path(chat)
-        if not path.exists():
-            return []
-        lines: list[str] = []
-        with open(path, "r", encoding="utf-8") as file:
-            for raw in file:
-                raw = raw.rstrip("\n")
-                if lines and not ENTRY_START.match(raw):
-                    lines[-1] += "\n" + raw.removeprefix(CONTINUATION)
-                else:
-                    lines.append(raw)
-        return lines[-limit:]
+        self.migrate(chat)
+        entries: list[str] = []
+        for path in reversed(self.day_files(chat)):
+            entries = read_entries(path) + entries
+            if len(entries) >= limit:
+                break
+        return entries[-limit:]
+
+    def cleanup(self, keep_days:int) -> int:
+        if keep_days <= 0 or not self.base.is_dir():
+            return 0
+        oldest = (datetime.now() - timedelta(days=keep_days - 1)).strftime("%Y-%m-%d")
+        removed = 0
+        for path in self.base.rglob("*.log"):
+            if DAY_FILE.match(path.name) and path.name[:10] < oldest:
+                path.unlink()
+                removed += 1
+        return removed
+
+
+def encode_entry(entry:str) -> str:
+    return entry.replace("\n", "\n" + CONTINUATION) + "\n"
+
+
+def read_entries(path:Path) -> list[str]:
+    entries: list[str] = []
+    with open(path, "r", encoding="utf-8") as file:
+        for raw in file:
+            raw = raw.rstrip("\n")
+            if entries and not ENTRY_START.match(raw):
+                entries[-1] += "\n" + raw.removeprefix(CONTINUATION)
+            else:
+                entries.append(raw)
+    return entries
+
+
+def entry_date(entry:str) -> str | None:
+    return entry[1:11] if ENTRY_START.match(entry) else None
 
 
 def format_line(sender:str, message:str) -> str:
