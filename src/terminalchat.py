@@ -26,7 +26,7 @@ class ChatApp(App):
         super().__init__()
         self.client = Client(config, self)
         self.active_chat: str | None = None
-        self.list_ids: list[str] = []
+        self.list_ids: list[str | None] = []
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -71,9 +71,9 @@ class ChatApp(App):
         defaults = self.client.config.get("default_channels") or []
         for index, channel in enumerate(defaults):
             await self.client.join(channel, open_chat=index == 0)
-        ids = self.client.store.ids()
-        if not defaults and ids and self.active_chat is None:
-            await self.open_chat(ids[0])
+        first = self.first_chat_id()
+        if not defaults and first and self.active_chat is None:
+            await self.open_chat(first)
 
     async def periodic_worker(self) -> None:
         while True:
@@ -89,16 +89,33 @@ class ChatApp(App):
         if isinstance(self.screen, ChannelsList):
             self.screen.run_worker(self.screen.render_lists(), exclusive=True)
 
+    def first_chat_id(self) -> str | None:
+        chats = list(self.client.store.chats.values())
+        ordered = [chat for chat in chats if chat.kind == CHANNEL] + [chat for chat in chats if chat.kind != CHANNEL]
+        return ordered[0].id if ordered else None
+
+    def list_entry(self, chat:Chat) -> ListItem:
+        prefix = "#" if chat.kind == CHANNEL else "@"
+        marker = "*" if chat.unread else " "
+        pin = "+" if self.client.pins.is_pinned(chat) else " "
+        return ListItem(Label(f"{marker}{pin}{prefix}{html.unescape(chat.title)}", markup=False))
+
     async def rebuild_list(self) -> None:
-        chats = self.client.store.chats
-        self.list_ids = list(chats.keys())
+        chats = list(self.client.store.chats.values())
+        channels = [chat for chat in chats if chat.kind == CHANNEL]
+        users = [chat for chat in chats if chat.kind != CHANNEL]
+
+        self.list_ids = []
         items = []
-        for chat_id in self.list_ids:
-            chat = chats[chat_id]
-            prefix = "#" if chat.kind == CHANNEL else "@"
-            marker = "*" if chat.unread else " "
-            pin = "+" if self.client.pins.is_pinned(chat) else " "
-            items.append(ListItem(Label(f"{marker}{pin}{prefix}{html.unescape(chat.title)}", markup=False)))
+        for chat in channels:
+            self.list_ids.append(chat.id)
+            items.append(self.list_entry(chat))
+        if channels and users:
+            self.list_ids.append(None)
+            items.append(ListItem(Label(""), disabled=True))
+        for chat in users:
+            self.list_ids.append(chat.id)
+            items.append(self.list_entry(chat))
 
         await self.list_view.clear()
         if items:
@@ -136,9 +153,9 @@ class ChatApp(App):
             await self.rebuild_list()
             return
         self.active_chat = None
-        ids = self.client.store.ids()
-        if ids:
-            await self.open_chat(ids[0])
+        first = self.first_chat_id()
+        if first:
+            await self.open_chat(first)
             return
         await self.chat_view.remove_children()
         await self.chat_view.mount(Static("No chats", classes="placeholder"))
@@ -148,7 +165,7 @@ class ChatApp(App):
         if event.list_view.id != "chat_list":
             return
         index = event.list_view.index
-        if index is not None and 0 <= index < len(self.list_ids):
+        if index is not None and 0 <= index < len(self.list_ids) and self.list_ids[index]:
             await self.open_chat(self.list_ids[index])
             self.query_one("#chat_input", Input).focus()
 
