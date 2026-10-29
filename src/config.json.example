@@ -2,6 +2,7 @@
 	"account"   : "",
 	"password"  : "",
 	"character" : "",
+	"remember_password": true,
 	"protocol"  : "wss://",
 	"server"    : "chat.f-list.net",
 	"endpoint"  : "/chat2",

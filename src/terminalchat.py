@@ -7,12 +7,15 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
 
+import login
 from chat_store import CHANNEL, Chat
 from chat_widgets import ChatLine, HistoryInput
 from client import Client
 from config import Config
 from eicons import EiconCache
 from panels.channels_list_panel import ChannelsList
+from panels.character_panel import CharacterScreen
+from panels.login_panel import Credentials, LoginScreen
 from terminal_config import APP_BINDINGS, APP_CSS
 
 
@@ -26,7 +29,10 @@ class ChatApp(App):
 
     def __init__(self, config:Config) -> None:
         super().__init__()
+        self.config = config
         self.client = Client(config, self)
+        self.characters: list[str] = []
+        self.online = False
         self.eicons = None
         if config.get("eicons", "inline") == "inline":
             self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
@@ -56,10 +62,73 @@ class ChatApp(App):
         return self.client.store.get(self.active_chat) if self.active_chat else None
 
     async def on_mount(self) -> None:
-        self.sub_title = "connecting..."
-        await self.chat_view.mount(Static("No chats - press ctrl+o for the channel list or type /help", classes="placeholder"))
+        self.sub_title = "offline"
+        await self.reset_view()
         self.query_one("#chat_input", Input).focus()
-        self.run_worker(self.start_backend(), exclusive=True)
+        if self.config.is_complete():
+            self.connect()
+        else:
+            self.show_login()
+
+    def connect(self) -> None:
+        self.run_worker(self.start_backend(), exclusive=True, group="backend")
+
+    def show_login(self, message:str="") -> None:
+        screen = LoginScreen(str(self.config.get("account", "")), bool(self.config.get("remember_password", True)), message)
+        self.push_screen(screen, self.on_login_done)
+
+    def on_login_done(self, credentials:Credentials | None) -> None:
+        if credentials is None:
+            self.exit()
+            return
+        self.config["account"] = credentials.account
+        self.config["password"] = credentials.password
+        self.config["remember_password"] = credentials.remember
+        self.characters = credentials.characters
+        preferred = self.match_character(str(self.config.get("character"))) or credentials.default_character
+        self.choose_character(preferred)
+
+    def choose_character(self, preferred:str="") -> None:
+        self.push_screen(CharacterScreen(self.characters, preferred or self.client.character), self.on_character_chosen)
+
+    def on_character_chosen(self, name:str | None) -> None:
+        if name is None:
+            if not self.online:
+                self.show_login()
+            return
+        self.run_worker(self.switch_character(name), exclusive=True, group="backend")
+
+    def match_character(self, name:str) -> str | None:
+        name = name.strip().lower()
+        return next((character for character in self.characters if character.lower() == name), None)
+
+    async def switch_character(self, name:str) -> None:
+        await self.shutdown_client()
+        self.config["character"] = name
+        self.config.save()
+        self.client = Client(self.config, self)
+        await self.reset_view()
+        await self.start_backend()
+
+    async def logout(self) -> None:
+        await self.shutdown_client()
+        self.config["password"] = ""
+        self.config.save()
+        await self.reset_view()
+        self.sub_title = "offline"
+        self.show_login()
+
+    async def shutdown_client(self) -> None:
+        self.online = False
+        self.workers.cancel_group(self, "receiver")
+        self.workers.cancel_group(self, "periodic")
+        await self.client.stop()
+
+    async def reset_view(self) -> None:
+        self.active_chat = None
+        await self.rebuild_list()
+        await self.chat_view.remove_children()
+        await self.chat_view.mount(Static("No chats - press ctrl+o for the channel list or type /help", classes="placeholder"))
 
     async def on_unmount(self) -> None:
         await self.client.stop()
@@ -67,11 +136,33 @@ class ChatApp(App):
             await self.eicons.close()
 
     async def start_backend(self) -> None:
-        if not await self.client.start():
+        self.sub_title = "logging in..."
+        result = await login.fetch_ticket(str(self.config.get("account")), str(self.config.get("password")))
+        if result.error:
             self.sub_title = "offline"
-            self.notify("Could not connect to the chat server", severity="error")
+            self.show_login(result.error)
             return
 
+        self.characters = result.characters
+        name = self.match_character(str(self.config.get("character")))
+        if name is None:
+            self.sub_title = "offline"
+            self.notify(f"Character '{self.config.get('character')}' not found on this account", severity="warning")
+            self.choose_character(result.default_character)
+            return
+        if name != self.client.character:
+            self.config["character"] = name
+            self.config.save()
+            self.client = Client(self.config, self)
+
+        self.sub_title = "connecting..."
+        error = await self.client.start(result.ticket)
+        if error:
+            self.sub_title = "offline"
+            self.notify(error, severity="error")
+            return
+
+        self.online = True
         self.sub_title = f"online as {self.client.character}"
         self.run_worker(self.client.consumer.receive(), group="receiver")
         self.run_worker(self.periodic_worker(), group="periodic")
@@ -90,6 +181,7 @@ class ChatApp(App):
             await asyncio.sleep(LIST_REFRESH_SECONDS)
 
     async def connection_lost(self) -> None:
+        self.online = False
         self.sub_title = "disconnected"
         self.notify("Connection to the chat server lost", severity="error", timeout=15)
         await self.client.stop()

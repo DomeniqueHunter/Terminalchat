@@ -9,6 +9,8 @@ HELP_TEXT = (
     "/pin, /unpin      (un)pin the current chat, restored on start\n"
     "/pins             show pinned chats\n"
     "/gif [on|off]     toggle animated eicons\n"
+    "/char [name]      switch character\n"
+    "/logout           log out and forget password\n"
     "/channels         open the channel list\n"
     "/quit             exit"
 )
@@ -36,6 +38,8 @@ class ChatCommands:
             "unpin": self.cmd_unpin,
             "pins": self.cmd_pins,
             "gif": self.cmd_gif,
+            "char": self.cmd_char,
+            "logout": self.cmd_logout,
             "help": self.cmd_help,
             "quit": self.cmd_quit,
         }
@@ -109,6 +113,25 @@ class ChatCommands:
         else:
             self.app.gif_enabled = not self.app.gif_enabled
         self.app.notify(f"Animated eicons {'on' if self.app.gif_enabled else 'off'}")
+
+    async def cmd_char(self, args:str) -> None:
+        if not self.app.characters:
+            self.app.notify("Character list not available yet", severity="warning")
+            return
+        name = unquote(args)
+        if not name:
+            self.app.choose_character()
+            return
+        match = self.app.match_character(name)
+        if match is None:
+            self.app.notify(f"'{name}' is not a character of this account", severity="warning")
+        elif match == self.client.character:
+            self.app.notify(f"Already logged in as {match}")
+        else:
+            self.app.run_worker(self.app.switch_character(match), exclusive=True, group="backend")
+
+    async def cmd_logout(self, args:str) -> None:
+        await self.app.logout()
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()

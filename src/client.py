@@ -31,13 +31,17 @@ class Client:
         self.joining: set[str] = set()
         self.online: dict[str, str] = {}
 
-    async def start(self) -> bool:
+    async def start(self, ticket:str) -> str | None:
+        async def cached_ticket() -> str:
+            return ticket
+
+        self.comm.get_api_ticket = cached_ticket
         if not await self.comm.connect():
-            return False
+            return "Could not connect to the chat server"
         await self.comm.start_sender()
         await self.comm.identify()
         await self.comm.start_receiver()
-        return True
+        return None
 
     async def stop(self) -> None:
         await self.comm.stop()
