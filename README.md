@@ -13,10 +13,12 @@ Features:
 - Input history (arrow keys)
 - Local chat logs per character
 - Respects `NO_COLOR`
+- Keeps running in the background (`/minimize`, re-attach with `terminalchat`)
 
 ## Requirements
 
 - Python 3.10 or newer
+- tmux (optional, for running in the background). For sharp eicons inside the launcher's tmux session, tmux 3.4+ built with Sixel support is needed; otherwise eicons fall back to block graphics.
 - A terminal with Sixel or Kitty graphics support for sharp eicons (e.g. Konsole, WezTerm, foot, Kitty, iTerm2). Other terminals fall back to coarse block graphics.
 
 ## Installation
@@ -24,14 +26,46 @@ Features:
 ```bash
 git clone <repository-url> terminalchat
 cd terminalchat
+./setup.sh
+```
+
+`setup.sh` installs the system packages (tmux, Python with venv support) using your distribution's package manager (pacman, apt, dnf, zypper or Homebrew) after asking for confirmation, creates `venv/` and installs the Python requirements. It can be run again at any time, e.g. after a Python update broke the venv.
+
+| Option | Description |
+|---|---|
+| `--skip-packages` | Only set up the Python environment |
+| `--recreate-venv` | Delete and recreate `venv/` |
+| `-y`, `--yes` | Do not ask before installing system packages |
+
+Manual installation:
+
+```bash
 python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+venv/bin/pip install -r requirements.txt
+```
+
+To start the client from anywhere, link the launcher into your `PATH`:
+
+```bash
+ln -s "$(pwd)/terminalchat" ~/.local/bin/terminalchat
 ```
 
 ## Running
 
-The client reads and writes `config.json`, its logs and chat history relative to the working directory, so start it from inside `src/`:
+```bash
+terminalchat
+```
+
+The launcher runs the client inside its own [tmux](https://github.com/tmux/tmux) session (separate tmux server, so your own tmux setup is not touched). This allows the chat to keep running in the background:
+
+- `/minimize` detaches your terminal; the client stays connected, keeps receiving messages and writing logs.
+- Closing the terminal or losing the SSH connection has the same effect.
+- Running `terminalchat` again re-attaches to the running session.
+- `/quit` (or `ctrl+q`) ends the client and the session.
+
+Without tmux installed the launcher starts the client in the foreground; `/minimize` is then unavailable.
+
+To run the client directly without the launcher, start it from inside `src/`, because `config.json`, logs and chat history are read relative to the working directory:
 
 ```bash
 cd src
@@ -57,6 +91,7 @@ Type commands into the input line.
 | `/gif [on\|off]` | Turn eicon animation on or off; without argument it toggles |
 | `/char [name]` | Switch character; without a name a character picker opens |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
+| `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/help` | Show the command list |
 | `/quit` | Exit |
 
@@ -103,6 +138,7 @@ Colors can be adjusted in `src/color_config.py`.
 | `src/chats/<character>/pins.json` | Pinned chats |
 | `~/.cache/terminalchat/eicons/` | Eicon cache (respects `XDG_CACHE_HOME`) |
 | `src/debug.log` | Debug output |
+| `tmux.conf` | Settings for the launcher's tmux server |
 
 ## Security note
 
