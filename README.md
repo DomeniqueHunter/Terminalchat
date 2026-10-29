@@ -98,6 +98,7 @@ Type commands into the input line.
 | `/status [status] [message]` | Set your status (`online`, `looking`, `busy`, `dnd`, `idle`, `away`) and an optional message (max. 255 characters). If the first word is not a status, the whole text becomes the message and the status is kept (`/status back in 5`); without arguments the current status is shown. The status is stored per character and restored after every login; `/status online` resets it |
 | `/status:flag <status>` | Change only the status, keep the message |
 | `/status:message [text]` | Change only the message, keep the status; without text the message is cleared |
+| `/ads [on\|off]` | Show or hide ads (role play ads) in the current channel; hidden ads are still logged and reappear with `/ads on`. Stored per channel and character |
 | `/gif [on\|off]` | Turn eicon animation on or off; without argument it toggles |
 | `/char [name]` | Switch character; without a name a character picker opens |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
@@ -160,6 +161,7 @@ The sidebar on the right has two tabs: *Friends* lists your friends that are onl
 | `remember_password` | `true` | Store the password in `config.json` |
 | `default_channels` | `[]` | Channels joined on every start |
 | `show_sidebar` | `false` | Show the sidebar on startup |
+| `show_ads` | `true` | Show ads in channels without an own `/ads` setting |
 | `eicons` | `"inline"` | `"inline"` shows eicons as images, `"off"` shows them as `:name:` links |
 | `eicon_height` | `4` | Eicon height in text lines |
 | `eicon_animate` | `true` | Animate eicons on startup (see `/gif`) |
@@ -176,6 +178,7 @@ Colors can be adjusted in `src/color_config.py`, including the gender colors (`G
 | `src/chats/<character>/` | Chat logs per character, private chats and `channels/` |
 | `src/chats/<character>/pins.json` | Pinned chats |
 | `src/chats/<character>/status.json` | Your status and status message |
+| `src/chats/<character>/ads.json` | Per-channel ad visibility |
 | `src/chats/genders.json` | Known genders of other characters, used for name colors |
 | `~/.cache/terminalchat/eicons/` | Eicon cache (respects `XDG_CACHE_HOME`) |
 | `src/debug.log` | Debug output |

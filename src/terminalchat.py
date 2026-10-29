@@ -10,7 +10,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Input, Label, ListItem, ListView, OptionList, Static
 
 import login
-from chat_store import CHANNEL, Chat
+from chat_store import CHANNEL, Chat, is_ad_line
 from chat_widgets import ChatLine, CommandHints, HistoryInput, StatusHeader
 from client import Client
 from color_config import gender_style
@@ -320,6 +320,8 @@ class ChatApp(App):
 
         await self.chat_view.remove_children()
         lines = self.client.store.history(chat)
+        if chat.kind == CHANNEL and not self.client.ads.visible(chat.key):
+            lines = [line for line in lines if not is_ad_line(line)]
         widgets = [self.chat_line(line) for line in lines] or [Static("No messages yet", classes="placeholder")]
         await self.chat_view.mount_all(widgets)
         self.chat_view.scroll_end(animate=False)

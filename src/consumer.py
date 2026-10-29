@@ -80,7 +80,7 @@ class Consumer:
         await self.client.on_channel_message(data["channel"], data["character"], data.get("message", ""))
 
     async def on_ad(self, data:dict) -> None:
-        await self.client.on_channel_message(data["channel"], f"[AD] {data['character']}", data.get("message", ""))
+        await self.client.on_ad(data["channel"], data["character"], data.get("message", ""))
 
     async def on_roll(self, data:dict) -> None:
         message = data.get("message", "")

@@ -5,8 +5,9 @@ from fchat import ChannelManager
 from fchat import Communication
 from fchat import Opcode as opcode
 
+from ad_settings import AdSettings
 from chat_commands import ChatCommands
-from chat_store import CHANNEL, USER, Chat, ChatStore, make_id
+from chat_store import AD_PREFIX, CHANNEL, USER, Chat, ChatStore, make_id
 from config import Config
 from consumer import Consumer
 from genders import GenderStore
@@ -29,6 +30,7 @@ class Client:
         self.commands = ChatCommands(self)
 
         self.pins = Pins(self.store.base / "pins.json")
+        self.ads = AdSettings(self.store.base / "ads.json", bool(config.get("show_ads", True)))
         self.genders = GenderStore(self.store.base.parent / "genders.json")
         self.own_status = OwnStatus(self.store.base / "status.json")
 
@@ -202,12 +204,22 @@ class Client:
         line = self.store.append(chat, sender, message)
         await self.app.show_line(chat.id, line)
 
-    async def on_channel_message(self, code:str, sender:str, message:str) -> None:
+    def channel_chat(self, code:str) -> Chat:
         chat = self.store.find(CHANNEL, code)
         if chat is None:
             chat = self.store.get_or_create(code, CHANNEL, self.channel_title(code))
+        return chat
+
+    async def on_channel_message(self, code:str, sender:str, message:str) -> None:
+        chat = self.channel_chat(code)
         line = self.store.append(chat, sender, message)
         await self.app.show_line(chat.id, line)
+
+    async def on_ad(self, code:str, sender:str, message:str) -> None:
+        chat = self.channel_chat(code)
+        line = self.store.append(chat, f"{AD_PREFIX}{sender}", message)
+        if self.ads.visible(code):
+            await self.app.show_line(chat.id, line)
 
 
 def main() -> None:

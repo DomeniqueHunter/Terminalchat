@@ -41,6 +41,7 @@ COMMAND_INFO = [
     ("pin", "", "pin the current chat, restored on start"),
     ("unpin", "", "unpin the current chat"),
     ("pins", "", "show pinned chats"),
+    ("ads", "[on|off]", "show or hide ads in the current channel"),
     ("gif", "[on|off]", "toggle animated eicons"),
     ("char", "[name]", "switch character"),
     ("logout", "", "log out and forget password"),
@@ -106,6 +107,7 @@ class ChatCommands:
             "pin": self.cmd_pin,
             "unpin": self.cmd_unpin,
             "pins": self.cmd_pins,
+            "ads": self.cmd_ads,
             "gif": self.cmd_gif,
             "char": self.cmd_char,
             "logout": self.cmd_logout,
@@ -294,6 +296,20 @@ class ChatCommands:
             return
         lines = [f"{'#' if item['kind'] == 'channel' else '@'}{item.get('title') or item['key']}" for item in items]
         self.app.notify("\n".join(lines), title="Pinned", timeout=10)
+
+    async def cmd_ads(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is None:
+            return
+        value = args.strip().lower()
+        if value not in ("", "on", "off"):
+            self.app.notify("Usage: /ads [on|off]", severity="warning")
+            return
+        if value:
+            self.client.ads.set_visible(chat.key, value == "on")
+            await self.app.open_chat(chat.id)
+        state = "shown" if self.client.ads.visible(chat.key) else "hidden"
+        self.app.notify(f"Ads in {chat.title}: {state}")
 
     async def cmd_gif(self, args:str) -> None:
         value = args.lower()

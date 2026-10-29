@@ -106,6 +106,14 @@ def format_line(sender:str, message:str) -> str:
     return f"[{timestamp}] {sender}: {message}"
 
 
+AD_PREFIX = "[AD] "
+
+
+def is_ad_line(line:str) -> bool:
+    match = LINE_PATTERN.match(line)
+    return bool(match) and match.group(2).startswith(AD_PREFIX)
+
+
 def split_line(line:str, name_style:NameStyle | None=None) -> tuple[Text, str]:
     name_style = name_style or no_name_style
     match = LINE_PATTERN.match(line)

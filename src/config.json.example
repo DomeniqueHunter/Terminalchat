@@ -9,6 +9,7 @@
 	"port"      : 8722,
 	"default_channels": ["Development"],
 	"show_sidebar": false,
+	"show_ads": true,
 	"eicons"    : "inline",
 	"eicon_height": 4,
 	"eicon_max_age_hours": 24,
