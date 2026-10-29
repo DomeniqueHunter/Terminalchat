@@ -2,6 +2,7 @@
 APP_BINDINGS = [
         ("ctrl+o", "open_channels_list", "Channels"),
         ("ctrl+l", "close_chat", "Close chat"),
+        ("ctrl+f", "toggle_sidebar", "Users"),
     ]
 
 
@@ -17,7 +18,7 @@ APP_CSS = """
     }
 
     #chat_container {
-        width: 75%;
+        width: 1fr;
         layout: vertical;
     }
 

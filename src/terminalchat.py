@@ -5,7 +5,7 @@ import html
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
+from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, OptionList, Static
 
 import login
 from chat_store import CHANNEL, Chat
@@ -16,10 +16,13 @@ from eicons import EiconCache
 from panels.channels_list_panel import ChannelsList
 from panels.character_panel import CharacterScreen
 from panels.login_panel import Credentials, LoginScreen
+from panels.sidebar import Sidebar
+from presence import FRIENDS
 from terminal_config import APP_BINDINGS, APP_CSS
 
 
 LIST_REFRESH_SECONDS = 300
+SIDEBAR_REFRESH_SECONDS = 1.0
 
 
 class ChatApp(App):
@@ -33,6 +36,7 @@ class ChatApp(App):
         self.client = Client(config, self)
         self.characters: list[str] = []
         self.online = False
+        self.sidebar_dirty: set[str] = {FRIENDS}
         self.eicons = None
         if config.get("eicons", "inline") == "inline":
             self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
@@ -48,6 +52,7 @@ class ChatApp(App):
             with Vertical(id="chat_container"):
                 yield VerticalScroll(id="chat_view")
                 yield HistoryInput(placeholder="Type message or /help ...", id="chat_input")
+            yield Sidebar(id="sidebar")
         yield Footer()
 
     @property
@@ -61,7 +66,13 @@ class ChatApp(App):
     def current_chat(self) -> Chat | None:
         return self.client.store.get(self.active_chat) if self.active_chat else None
 
+    @property
+    def sidebar(self) -> Sidebar:
+        return self.query_one("#sidebar", Sidebar)
+
     async def on_mount(self) -> None:
+        self.sidebar.display = bool(self.config.get("show_sidebar", False))
+        self.set_interval(SIDEBAR_REFRESH_SECONDS, self.refresh_sidebar)
         self.sub_title = "offline"
         await self.reset_view()
         self.query_one("#chat_input", Input).focus()
@@ -126,6 +137,7 @@ class ChatApp(App):
 
     async def reset_view(self) -> None:
         self.active_chat = None
+        self.sidebar_dirty.add(FRIENDS)
         await self.rebuild_list()
         await self.chat_view.remove_children()
         await self.chat_view.mount(Static("No chats - press ctrl+o for the channel list or type /help", classes="placeholder"))
@@ -190,6 +202,42 @@ class ChatApp(App):
         if isinstance(self.screen, ChannelsList):
             self.screen.run_worker(self.screen.render_lists(), exclusive=True)
 
+    def presence_changed(self, key:str) -> None:
+        self.sidebar_dirty.add(key)
+
+    def refresh_sidebar(self) -> None:
+        if not self.sidebar_dirty or not self.sidebar.display:
+            return
+        self.sidebar_dirty.clear()
+        presence = self.client.presence
+
+        friends = presence.online_friends()
+        self.sidebar.update_list("friends_list", "tab_friends", f"Friends ({len(friends)})", friends, "No friends online")
+
+        chat = self.current_chat()
+        if chat is None or chat.kind != CHANNEL:
+            self.sidebar.update_list("members_list", "tab_channel", "Channel", [], "No channel open")
+            return
+        members = presence.channel_members(chat.key)
+        if members is None:
+            self.sidebar.update_list("members_list", "tab_channel", "Channel", [], "Loading ...")
+        else:
+            self.sidebar.update_list("members_list", "tab_channel", f"Channel ({len(members)})", members, "Nobody here")
+
+    def action_toggle_sidebar(self) -> None:
+        self.sidebar.display = not self.sidebar.display
+        if self.sidebar.display:
+            chat = self.current_chat()
+            self.sidebar.show_tab("tab_channel" if chat and chat.kind == CHANNEL else "tab_friends")
+            self.sidebar_dirty.add("view")
+            self.refresh_sidebar()
+
+    async def on_option_list_option_selected(self, event:OptionList.OptionSelected) -> None:
+        if event.option_list.id not in ("friends_list", "members_list") or event.option.id is None:
+            return
+        await self.client.open_private(event.option.id)
+        self.query_one("#chat_input", Input).focus()
+
     def chat_line(self, line:str) -> ChatLine:
         return ChatLine(line, self.eicons, self.eicon_height)
 
@@ -233,6 +281,10 @@ class ChatApp(App):
             return
         self.active_chat = chat_id
         chat.unread = False
+        self.sidebar_dirty.add("view")
+        if self.sidebar.display:
+            self.sidebar.show_tab("tab_channel" if chat.kind == CHANNEL else "tab_friends")
+            self.refresh_sidebar()
 
         await self.chat_view.remove_children()
         lines = self.client.store.history(chat)

@@ -26,6 +26,12 @@ class Consumer:
             opcode.JOIN_CHANNEL: self.on_join,
             opcode.LEAVE_CHANNEL: self.on_leave,
             opcode.LIST_CHARACTERS: self.on_character_list,
+            opcode.FRIENDS_LIST: self.on_friends,
+            opcode.STATUS: self.on_status,
+            opcode.INITIAL_CHANNEL_DATA: self.on_channel_users,
+            opcode.LIST_OPS: self.on_ops,
+            opcode.PROMOTE_OP: self.on_op_added,
+            opcode.DEMOTE_OP: self.on_op_removed,
             opcode.USER_CONNECTED: self.on_user_connected,
             opcode.GONE_OFFLINE: self.on_user_offline,
             opcode.ERROR: self.on_error,
@@ -86,21 +92,44 @@ class Consumer:
         self.app.channel_lists_updated()
 
     async def on_join(self, data:dict) -> None:
-        if not self.client.is_me(data["character"]["identity"]):
-            return
         code = data["channel"]
+        identity = data["character"]["identity"]
+        if not self.client.is_me(identity):
+            self.client.presence.add_member(code, identity)
+            return
         await self.client.on_joined(code, data.get("title") or code)
 
     async def on_leave(self, data:dict) -> None:
         if self.client.is_me(data.get("character")):
             await self.client.on_left(data["channel"])
+        else:
+            self.client.presence.remove_member(data["channel"], data.get("character", ""))
 
     async def on_character_list(self, data:dict) -> None:
         for entry in data.get("characters", []):
-            self.client.set_online(entry[0])
+            self.client.set_online(entry[0], entry[2] if len(entry) > 2 else "online")
 
     async def on_user_connected(self, data:dict) -> None:
-        self.client.set_online(data["identity"])
+        self.client.set_online(data["identity"], data.get("status", "online"))
+
+    async def on_friends(self, data:dict) -> None:
+        self.client.presence.set_friends(data.get("characters", []))
+
+    async def on_status(self, data:dict) -> None:
+        self.client.presence.set_status(data["character"], data.get("status", "online"))
+
+    async def on_channel_users(self, data:dict) -> None:
+        names = [user["identity"] for user in data.get("users", [])]
+        self.client.presence.set_members(data["channel"], names)
+
+    async def on_ops(self, data:dict) -> None:
+        self.client.presence.set_ops(data["channel"], data.get("oplist", []))
+
+    async def on_op_added(self, data:dict) -> None:
+        self.client.presence.add_op(data["channel"], data["character"])
+
+    async def on_op_removed(self, data:dict) -> None:
+        self.client.presence.remove_op(data["channel"], data["character"])
 
     async def on_user_offline(self, data:dict) -> None:
         self.client.set_offline(data["character"])

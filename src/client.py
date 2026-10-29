@@ -10,6 +10,7 @@ from chat_store import CHANNEL, USER, Chat, ChatStore, make_id
 from config import Config
 from consumer import Consumer
 from pins import Pins
+from presence import Presence
 
 
 class Client:
@@ -29,7 +30,7 @@ class Client:
 
         self.pending_open: set[str] = set()
         self.joining: set[str] = set()
-        self.online: dict[str, str] = {}
+        self.presence = Presence(app.presence_changed)
 
     async def start(self, ticket:str) -> str | None:
         async def cached_ticket() -> str:
@@ -91,16 +92,17 @@ class Client:
     async def leave(self, code:str) -> None:
         self.joining.discard(code)
         self.channel_manager.joined_channels.pop(code, None)
+        self.presence.drop_channel(code)
         await self.comm.message(opcode.LEAVE_CHANNEL, {"channel": code})
 
-    def set_online(self, name:str) -> None:
-        self.online[name.lower()] = name
+    def set_online(self, name:str, status:str="online") -> None:
+        self.presence.set_online(name, status)
 
     def set_offline(self, name:str) -> None:
-        self.online.pop(name.lower(), None)
+        self.presence.set_offline(name)
 
     def find_online(self, name:str) -> str | None:
-        return self.online.get(name.strip().lower())
+        return self.presence.find_online(name)
 
     async def open_private(self, character:str) -> None:
         name = self.find_online(character)
@@ -133,6 +135,7 @@ class Client:
 
     async def on_left(self, code:str) -> None:
         self.channel_manager.joined_channels.pop(code, None)
+        self.presence.drop_channel(code)
         chat_id = make_id(CHANNEL, code)
         self.store.remove(chat_id)
         await self.app.chat_removed(chat_id)

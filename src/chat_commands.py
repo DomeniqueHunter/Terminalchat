@@ -15,6 +15,7 @@ HELP_TEXT = (
     "/logout           log out and forget password\n"
     "/minimize         detach, keep running in background\n"
     "/channels         open the channel list\n"
+    "/users            show/hide friends and channel users\n"
     "/quit             exit"
 )
 
@@ -37,6 +38,7 @@ class ChatCommands:
             "priv": self.cmd_priv,
             "me": self.cmd_me,
             "channels": self.cmd_channels,
+            "users": self.cmd_users,
             "pin": self.cmd_pin,
             "unpin": self.cmd_unpin,
             "pins": self.cmd_pins,
@@ -147,6 +149,9 @@ class ChatCommands:
         )
         if await process.wait() != 0:
             self.app.notify("Could not detach from tmux", severity="error")
+
+    async def cmd_users(self, args:str) -> None:
+        self.app.action_toggle_sidebar()
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()

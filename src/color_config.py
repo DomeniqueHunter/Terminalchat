@@ -11,6 +11,27 @@ EICON_STYLE = "#af5fd7"
 URL_STYLE = "underline #5f87ff"
 SENDER_STYLE = "bold"
 SPOILER_STYLE = "reverse"
+OP_STYLE = "bold"
+
+STATUS_SYMBOLS = {
+    "looking": "+",
+    "online": "•",
+    "idle": "~",
+    "away": "~",
+    "busy": "-",
+    "dnd": "x",
+    "crown": "*",
+}
+
+STATUS_STYLES = {
+    "looking": "#55ff55",
+    "online": "#008080",
+    "idle": "#a8a8a8",
+    "away": "#a8a8a8",
+    "busy": "#ffaf00",
+    "dnd": "#ff5555",
+    "crown": "#ffff55",
+}
 
 BBCODE_COLORS = {
     "red": "#ff5555",

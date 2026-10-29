@@ -8,6 +8,7 @@
 	"endpoint"  : "/chat2",
 	"port"      : 8722,
 	"default_channels": ["Development"],
+	"show_sidebar": false,
 	"eicons"    : "inline",
 	"eicon_height": 4,
 	"eicon_max_age_hours": 24,
