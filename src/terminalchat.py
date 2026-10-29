@@ -8,7 +8,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
 
 from chat_store import CHANNEL, Chat
-from chat_widgets import ChatLine
+from chat_widgets import ChatLine, HistoryInput
 from client import Client
 from config import Config
 from eicons import EiconCache
@@ -41,7 +41,7 @@ class ChatApp(App):
             yield ListView(id="chat_list")
             with Vertical(id="chat_container"):
                 yield VerticalScroll(id="chat_view")
-                yield Input(placeholder="Type message or /help ...", id="chat_input")
+                yield HistoryInput(placeholder="Type message or /help ...", id="chat_input")
         yield Footer()
 
     @property
@@ -201,6 +201,8 @@ class ChatApp(App):
         event.input.value = ""
         if not text:
             return
+        if isinstance(event.input, HistoryInput):
+            event.input.remember(text)
 
         if text.startswith("/"):
             await self.client.commands.handle(text)

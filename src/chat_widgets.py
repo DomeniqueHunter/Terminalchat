@@ -1,7 +1,8 @@
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Static
+from textual.binding import Binding
+from textual.widgets import Input, Static
 
 from animated_eicon import make_eicon_widget
 from bbcode import to_text
@@ -77,3 +78,49 @@ class ChatLine(Vertical):
         await row.mount_all(widgets)
         if at_end:
             view.call_after_refresh(view.scroll_end, animate=False)
+
+
+class HistoryInput(Input):
+
+    BINDINGS = [
+        Binding("up", "history_prev", show=False),
+        Binding("down", "history_next", show=False),
+    ]
+
+    def __init__(self, *args:object, max_history:int=100, **kwargs:object) -> None:
+        super().__init__(*args, **kwargs)
+        self.max_history = max_history
+        self.history: list[str] = []
+        self.position: int | None = None
+        self.draft = ""
+
+    def remember(self, text:str) -> None:
+        if text and (not self.history or self.history[-1] != text):
+            self.history.append(text)
+            del self.history[:-self.max_history]
+        self.position = None
+        self.draft = ""
+
+    def set_text(self, text:str) -> None:
+        self.value = text
+        self.cursor_position = len(text)
+
+    def action_history_prev(self) -> None:
+        if not self.history:
+            return
+        if self.position is None:
+            self.draft = self.value
+            self.position = len(self.history)
+        if self.position > 0:
+            self.position -= 1
+            self.set_text(self.history[self.position])
+
+    def action_history_next(self) -> None:
+        if self.position is None:
+            return
+        self.position += 1
+        if self.position >= len(self.history):
+            self.position = None
+            self.set_text(self.draft)
+        else:
+            self.set_text(self.history[self.position])
