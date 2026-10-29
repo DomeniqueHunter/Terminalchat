@@ -7,7 +7,7 @@ from fchat import Opcode as opcode
 
 from ad_settings import AdSettings
 from chat_commands import ChatCommands
-from chat_store import AD_PREFIX, CHANNEL, USER, Chat, ChatStore, make_id
+from chat_store import AD_PREFIX, CHANNEL, CONSOLE, USER, Chat, ChatStore, make_id
 from config import Config
 from consumer import Consumer
 from genders import GenderStore
@@ -26,6 +26,7 @@ class Client:
         self.comm = Communication(config)
         self.channel_manager = ChannelManager(join_method=self._join_method)
         self.store = ChatStore(self.character)
+        self.console = self.store.get_or_create(CONSOLE, CONSOLE, "Console")
         self.consumer = Consumer(self)
         self.commands = ChatCommands(self)
 
@@ -182,10 +183,15 @@ class Client:
     async def invite(self, code:str, name:str) -> None:
         await self.comm.message(opcode.INVITE, {"channel": code, "character": name})
 
-    def on_invited(self, sender:str, code:str, title:str) -> None:
+    async def log_console(self, text:str) -> None:
+        line = self.store.append(self.console, "System", text)
+        await self.app.show_line(self.console.id, line)
+
+    async def on_invited(self, sender:str, code:str, title:str) -> None:
         if code not in self.channel_manager.open_private_channels:
             self.channel_manager.open_private_channels[code] = Channel(title, code)
         self.app.notify(f"{sender} invited you to {title}\n/join {title}", title="Invitation", timeout=30)
+        await self.log_console(f"[user]{sender}[/user] invited you to {title} - /join {title}")
 
     async def roll(self, chat:Chat, dice:str) -> None:
         if chat.kind == CHANNEL:

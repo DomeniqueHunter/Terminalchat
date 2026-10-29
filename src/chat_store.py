@@ -12,6 +12,7 @@ from color_config import SENDER_STYLE, NameStyle, make_style, no_name_style
 
 USER = "user"
 CHANNEL = "channel"
+CONSOLE = "console"
 
 LINE_PATTERN = re.compile(r"^(\[[^\]]*\]) ([^\n]+?): (.*)$", re.DOTALL)
 CONTINUATION = "\t"
@@ -69,6 +70,8 @@ class ChatStore:
         return list(self.chats.keys())
 
     def log_path(self, chat:Chat) -> Path:
+        if chat.kind == CONSOLE:
+            return self.base / "console.log"
         if chat.kind == CHANNEL:
             return self.base / "channels" / chat.key / "chat.log"
         return self.base / chat.key / "chat.log"

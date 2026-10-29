@@ -13,6 +13,8 @@ URL_STYLE = "underline #5f87ff"
 SENDER_STYLE = "bold"
 SPOILER_STYLE = "reverse"
 OP_STYLE = "bold"
+CHANNEL_LINK_STYLE = "bold #5fafff"
+RULE_STYLE = "dim"
 
 STATUS_SYMBOLS = {
     "looking": "+",

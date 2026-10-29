@@ -11,6 +11,7 @@ Features:
 - Character names colored by gender
 - Eicons shown as (animated) images directly in the chat
 - Pinned chats that are restored on startup
+- Console with global events and friends going online/offline
 - Login screen and character switching
 - Status and status message, remembered per character
 - Input history (arrow keys)
@@ -145,7 +146,9 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 
 The title bar shows your status and character (`Terminal Chat — looking — as <character>`). Click it to expand it and show your status message below; click again to collapse it.
 
-In the chat list on the left, channels (`#`) are listed above private chats (`@`). A `*` marks unread messages, a `+` marks pinned chats.
+In the chat list on the left, the console (`>`) is at the top, followed by channels (`#`) and private chats (`@`). A `*` marks unread messages, a `+` marks pinned chats.
+
+The console collects global events: connection, server messages and errors, broadcasts, site events, invitations and friends going online or offline. It is read-only and cannot be closed. Channel related events (kicks, bans, timeouts, operator changes, channel notices) are shown in the affected channel instead.
 
 The sidebar on the right has two tabs: *Friends* lists your friends that are online, *Channel* lists the users of the open channel (channel operators first, marked with `@`). It switches to the matching tab when you change chats. Press `enter` on a name to open a private chat. Status symbols: `+` looking, `•` online, `~` idle/away, `-` busy, `x` do not disturb.
 
@@ -177,6 +180,7 @@ Colors can be adjusted in `src/color_config.py`, including the gender colors (`G
 | `src/config.json` | Configuration and credentials (permissions `600`) |
 | `src/chats/<character>/` | Chat logs per character, private chats and `channels/` |
 | `src/chats/<character>/pins.json` | Pinned chats |
+| `src/chats/<character>/console.log` | Console history |
 | `src/chats/<character>/status.json` | Your status and status message |
 | `src/chats/<character>/ads.json` | Per-channel ad visibility |
 | `src/chats/genders.json` | Known genders of other characters, used for name colors |

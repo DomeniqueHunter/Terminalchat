@@ -1,3 +1,5 @@
+import asyncio
+
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.screen import ModalScreen
@@ -39,6 +41,7 @@ class CharacterScreen(ModalScreen[str | None]):
         super().__init__()
         self.characters = characters
         self.current = current
+        self.render_lock = asyncio.Lock()
 
     def compose(self) -> ComposeResult:
         with Vertical(id="character_box"):
@@ -51,6 +54,10 @@ class CharacterScreen(ModalScreen[str | None]):
         self.query_one("#character_search", Input).focus()
 
     async def render_list(self, needle:str) -> None:
+        async with self.render_lock:
+            await self._render_list(needle)
+
+    async def _render_list(self, needle:str) -> None:
         view = self.query_one("#character_list", ListView)
         await view.clear()
         names = [name for name in self.characters if needle.lower() in name.lower()]

@@ -1,3 +1,4 @@
+import asyncio
 import html
 from typing import Any
 
@@ -27,6 +28,7 @@ class ChannelsList(ModalScreen):
         super().__init__()
         self.client = client
         self.filters = {"public": "", "private": ""}
+        self.render_lock = asyncio.Lock()
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="container"):
@@ -52,6 +54,10 @@ class ChannelsList(ModalScreen):
         return sorted(items, key=lambda item: item[1].lower())[:MAX_ENTRIES]
 
     async def render_lists(self) -> None:
+        async with self.render_lock:
+            await self._render_lists()
+
+    async def _render_lists(self) -> None:
         for kind in ("public", "private"):
             view = self.query_one(f"#{kind}_list", ListView)
             await view.clear()

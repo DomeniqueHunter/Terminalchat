@@ -39,6 +39,10 @@ class Consumer:
             opcode.BAN: self.on_ban,
             opcode.TIMEOUT: self.on_timeout,
             opcode.ERROR: self.on_error,
+            opcode.SERVER_HELLO: self.on_hello,
+            opcode.NUMBER_OF_CONNECTED_USERS: self.on_user_count,
+            opcode.BROADCAST: self.on_broadcast,
+            opcode.SITE_EVENT: self.on_site_event,
             opcode.SYSTEM_MESSAGE: self.on_system,
         }
 
@@ -119,9 +123,15 @@ class Consumer:
             self.client.set_online(entry[0], entry[2] if len(entry) > 2 else "online")
             self.client.genders.set(entry[0], entry[1] if len(entry) > 1 else None)
 
+    def is_friend(self, name:str) -> bool:
+        return name.lower() in self.client.presence.friends and not self.client.is_me(name)
+
     async def on_user_connected(self, data:dict) -> None:
-        self.client.set_online(data["identity"], data.get("status", "online"))
-        self.client.genders.set(data["identity"], data.get("gender"))
+        name = data["identity"]
+        self.client.set_online(name, data.get("status", "online"))
+        self.client.genders.set(name, data.get("gender"))
+        if self.is_friend(name):
+            await self.client.log_console(f"[user]{name}[/user] is online")
 
     async def on_friends(self, data:dict) -> None:
         self.client.presence.set_friends(data.get("characters", []))
@@ -138,12 +148,36 @@ class Consumer:
 
     async def on_op_added(self, data:dict) -> None:
         self.client.presence.add_op(data["channel"], data["character"])
+        await self.client.on_channel_event(data["channel"], f"{data['character']} is now a channel operator")
 
     async def on_op_removed(self, data:dict) -> None:
         self.client.presence.remove_op(data["channel"], data["character"])
+        await self.client.on_channel_event(data["channel"], f"{data['character']} is no longer a channel operator")
 
     async def on_user_offline(self, data:dict) -> None:
-        self.client.set_offline(data["character"])
+        name = data["character"]
+        friend = self.is_friend(name)
+        self.client.set_offline(name)
+        if friend:
+            await self.client.log_console(f"[user]{name}[/user] went offline")
+
+    async def on_hello(self, data:dict) -> None:
+        await self.client.log_console(data.get("message", "Server hello"))
+
+    async def on_user_count(self, data:dict) -> None:
+        await self.client.log_console(f"{data.get('count', '?')} users online")
+
+    async def on_broadcast(self, data:dict) -> None:
+        message = data.get("message", "")
+        self.app.notify(message, title="Broadcast", timeout=20)
+        await self.client.log_console(f"Broadcast: {message}")
+
+    async def on_site_event(self, data:dict) -> None:
+        kind = data.get("type", "event")
+        who = data.get("name") or data.get("sender") or data.get("character") or ""
+        details = data.get("subject") or data.get("title") or ""
+        text = f"Site event: {kind}" + (f" from [user]{who}[/user]" if who else "") + (f" - {details}" if details else "")
+        await self.client.log_console(text)
 
     async def on_kick(self, data:dict) -> None:
         name = data.get("character", "")
@@ -160,16 +194,19 @@ class Consumer:
 
     async def on_invite(self, data:dict) -> None:
         code = data.get("name", "")
-        self.client.on_invited(data.get("sender", "?"), code, data.get("title") or code)
+        await self.client.on_invited(data.get("sender", "?"), code, data.get("title") or code)
 
     async def on_error(self, data:dict) -> None:
-        self.app.notify(f"Error {data.get('number')}: {data.get('message')}", severity="error")
+        text = f"Error {data.get('number')}: {data.get('message')}"
+        self.app.notify(text, severity="error")
+        await self.client.log_console(text)
 
     async def on_system(self, data:dict) -> None:
         if "channel" in data and self.client.store.find(CHANNEL, data["channel"]):
             await self.client.on_channel_message(data["channel"], "System", data.get("message", ""))
         else:
             self.app.notify(data.get("message", ""), title="System")
+            await self.client.log_console(data.get("message", ""))
 
 
 def main() -> None:

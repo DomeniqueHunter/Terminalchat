@@ -3,7 +3,7 @@ import os
 import re
 from typing import Any, Awaitable, Callable
 
-from chat_store import CHANNEL
+from chat_store import CHANNEL, CONSOLE
 from fchat import Opcode as opcode
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
 
@@ -144,8 +144,15 @@ class ChatCommands:
             return
         await self.client.open_private(unquote(args))
 
-    async def cmd_me(self, args:str) -> None:
+    def current_conversation(self) -> Any:
         chat = self.app.current_chat()
+        if chat is None or chat.kind == CONSOLE:
+            self.app.notify("Open a channel or private chat first", severity="warning")
+            return None
+        return chat
+
+    async def cmd_me(self, args:str) -> None:
+        chat = self.current_conversation()
         if chat is None or not args:
             return
         await self.client.send(chat, f"/me {args}")
@@ -254,9 +261,8 @@ class ChatCommands:
         await self.client.channel_command(opcode.SET_CHANNEL_MODE, {"channel": chat.key, "mode": mode})
 
     async def cmd_roll(self, args:str) -> None:
-        chat = self.app.current_chat()
+        chat = self.current_conversation()
         if chat is None:
-            self.app.notify("No chat open", severity="warning")
             return
         dice = args.replace(" ", "").lower() or DEFAULT_DICE
         if not DICE_PATTERN.match(dice):
@@ -272,9 +278,8 @@ class ChatCommands:
         await self.client.roll(chat, "bottle")
 
     async def cmd_pin(self, args:str) -> None:
-        chat = self.app.current_chat()
+        chat = self.current_conversation()
         if chat is None:
-            self.app.notify("No chat open", severity="warning")
             return
         if self.client.pins.pin(chat):
             self.app.notify(f"Pinned {chat.title}")

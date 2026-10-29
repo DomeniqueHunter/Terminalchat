@@ -10,7 +10,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Input, Label, ListItem, ListView, OptionList, Static
 
 import login
-from chat_store import CHANNEL, Chat, is_ad_line
+from chat_store import CHANNEL, CONSOLE, USER, Chat, is_ad_line
 from chat_widgets import ChatLine, CommandHints, HistoryInput, StatusHeader
 from client import Client
 from color_config import gender_style
@@ -41,6 +41,7 @@ class ChatApp(App):
         self.characters: list[str] = []
         self.online = False
         self.sidebar_dirty: set[str] = {FRIENDS}
+        self.list_lock = asyncio.Lock()
         self.eicons = None
         if config.get("eicons", "inline") == "inline":
             self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
@@ -204,12 +205,13 @@ class ChatApp(App):
         self.update_subtitle()
         await self.client.restore_status()
         self.run_worker(self.client.consumer.receive(), group="receiver")
-        self.run_worker(self.periodic_worker(), group="periodic")
 
         await self.client.restore_pins()
         defaults = self.client.config.get("default_channels") or []
         for index, channel in enumerate(defaults):
             await self.client.join(channel, open_chat=index == 0)
+        self.run_worker(self.periodic_worker(), group="periodic")
+        await self.client.log_console(f"Connected as [user]{self.client.character}[/user]")
         first = self.first_chat_id()
         if not defaults and first and self.active_chat is None:
             await self.open_chat(first)
@@ -222,6 +224,7 @@ class ChatApp(App):
     async def connection_lost(self) -> None:
         self.online = False
         self.sub_title = "disconnected"
+        await self.client.log_console("Connection to the chat server lost")
         self.notify("Connection to the chat server lost", severity="error", timeout=15)
         await self.client.stop()
 
@@ -273,33 +276,34 @@ class ChatApp(App):
 
     def first_chat_id(self) -> str | None:
         chats = list(self.client.store.chats.values())
-        ordered = [chat for chat in chats if chat.kind == CHANNEL] + [chat for chat in chats if chat.kind != CHANNEL]
+        ordered = [chat for kind in (CHANNEL, USER, CONSOLE) for chat in chats if chat.kind == kind]
         return ordered[0].id if ordered else None
 
     def list_entry(self, chat:Chat) -> ListItem:
-        prefix = "#" if chat.kind == CHANNEL else "@"
+        prefix = {CHANNEL: "#", CONSOLE: ">"}.get(chat.kind, "@")
         marker = "*" if chat.unread else " "
         pin = "+" if self.client.pins.is_pinned(chat) else " "
         title = html.unescape(chat.title)
-        style = self.name_style(chat.key) if chat.kind != CHANNEL else Style()
+        style = self.name_style(chat.key) if chat.kind == USER else Style()
         return ListItem(Label(Text.assemble(f"{marker}{pin}{prefix}", (title, style))))
 
     async def rebuild_list(self) -> None:
+        async with self.list_lock:
+            await self._rebuild_list()
+
+    async def _rebuild_list(self) -> None:
         chats = list(self.client.store.chats.values())
-        channels = [chat for chat in chats if chat.kind == CHANNEL]
-        users = [chat for chat in chats if chat.kind != CHANNEL]
+        groups = [[chat for chat in chats if chat.kind == kind] for kind in (CONSOLE, CHANNEL, USER)]
 
         self.list_ids = []
         items = []
-        for chat in channels:
-            self.list_ids.append(chat.id)
-            items.append(self.list_entry(chat))
-        if channels and users:
-            self.list_ids.append(None)
-            items.append(ListItem(Label(""), disabled=True))
-        for chat in users:
-            self.list_ids.append(chat.id)
-            items.append(self.list_entry(chat))
+        for group in [group for group in groups if group]:
+            if items:
+                self.list_ids.append(None)
+                items.append(ListItem(Label(""), disabled=True))
+            for chat in group:
+                self.list_ids.append(chat.id)
+                items.append(self.list_entry(chat))
 
         await self.list_view.clear()
         if items:
@@ -367,6 +371,9 @@ class ChatApp(App):
         chat = self.current_chat()
         if chat is None:
             return
+        if chat.kind == CONSOLE:
+            self.notify("The console cannot be closed", severity="warning")
+            return
         if chat.kind == CHANNEL:
             await self.client.leave(chat.key)
         self.client.store.remove(chat.id)
@@ -393,6 +400,9 @@ class ChatApp(App):
         chat = self.current_chat()
         if chat is None:
             self.notify("No chat open", severity="warning")
+            return
+        if chat.kind == CONSOLE:
+            self.notify("The console is read-only, use /commands here", severity="warning")
             return
         await self.client.send(chat, text)
 

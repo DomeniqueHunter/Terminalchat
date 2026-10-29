@@ -3,8 +3,8 @@ import re
 from rich.style import Style
 from rich.text import Text
 
-from color_config import (BBCODE_COLORS, EICON_STYLE, ICON_STYLE, SPOILER_STYLE,
-                          URL_STYLE, USER_STYLE, NameStyle, make_style, no_name_style)
+from color_config import (BBCODE_COLORS, CHANNEL_LINK_STYLE, EICON_STYLE, ICON_STYLE, RULE_STYLE,
+                          SPOILER_STYLE, URL_STYLE, USER_STYLE, NameStyle, make_style, no_name_style)
 from eicons import eicon_url
 
 
@@ -18,14 +18,22 @@ SIMPLE_STYLES = {
     "sub": Style(dim=True),
     "sup": Style(dim=True),
     "spoiler": make_style(SPOILER_STYLE),
+    "big": Style(bold=True),
+    "small": Style(dim=True),
+    "heading": Style(bold=True, underline=True),
 }
 
-CONTENT_TAGS = {"user", "icon", "eicon", "url", "noparse"}
+PASSTHROUGH_TAGS = {"center", "left", "right", "justify", "indent", "collapse", "quote"}
+VOID_TAGS = {"hr"}
+CONTENT_TAGS = {"user", "icon", "eicon", "url", "noparse", "session", "channel"}
+RULE = "\u2500" * 24
 
 
 def tag_style(name:str, value:str | None) -> Style | None:
     if name in SIMPLE_STYLES:
         return SIMPLE_STYLES[name]
+    if name in PASSTHROUGH_TAGS:
+        return Style()
     if name == "color" and value:
         color = BBCODE_COLORS.get(value.lower())
         return make_style(color) if color else Style()
@@ -42,6 +50,10 @@ def render_content_tag(text:Text, name:str, value:str | None, content:str, base:
         if not show_eicons:
             return
         text.append(f":{content}:", base + make_style(EICON_STYLE) + Style(link=eicon_url(content)))
+    elif name == "session":
+        text.append(f"#{value or content}", base + make_style(CHANNEL_LINK_STYLE))
+    elif name == "channel":
+        text.append(f"#{content}", base + make_style(CHANNEL_LINK_STYLE))
     elif name == "url":
         url = value or content
         label = content or url
@@ -84,6 +96,11 @@ def to_text(source:str, show_eicons:bool=True, name_style:NameStyle | None=None)
                 position = end + len(name) + 3
                 continue
             text.append(match.group(0), current())
+            continue
+
+        if name in VOID_TAGS:
+            if not closing:
+                text.append(RULE, make_style(RULE_STYLE))
             continue
 
         if closing:
