@@ -7,7 +7,7 @@ from textual.widgets import Input, Static
 from animated_eicon import make_eicon_widget
 from bbcode import to_text
 from chat_store import render_line, split_line
-from color_config import EICON_STYLE, make_style
+from color_config import EICON_STYLE, NameStyle, make_style
 from eicons import MAX_PER_MESSAGE, EiconCache, extract_eicons
 
 
@@ -30,8 +30,10 @@ class ChatLine(Vertical):
     }
     """
 
-    def __init__(self, line:str, eicons:EiconCache | None=None, eicon_height:int=4) -> None:
+    def __init__(self, line:str, eicons:EiconCache | None=None, eicon_height:int=4,
+                 name_style:NameStyle | None=None) -> None:
         super().__init__()
+        self.name_style = name_style
         self.line = line
         self.eicons = eicons
         self.eicon_height = eicon_height
@@ -39,13 +41,13 @@ class ChatLine(Vertical):
 
     def compose(self) -> ComposeResult:
         if self.eicons is None or not extract_eicons(self.line):
-            yield Static(render_line(self.line, show_eicons=self.eicons is None))
+            yield Static(render_line(self.line, self.eicons is None, self.name_style))
             return
 
-        header, message = split_line(self.line)
+        header, message = split_line(self.line, self.name_style)
         remaining = MAX_PER_MESSAGE
         for index, part in enumerate(message.split("\n")):
-            text = to_text(part, show_eicons=False)
+            text = to_text(part, False, self.name_style)
             if index == 0:
                 yield Static(Text.assemble(header, text))
             elif text.plain.strip():

@@ -9,6 +9,7 @@ from chat_commands import ChatCommands
 from chat_store import CHANNEL, USER, Chat, ChatStore, make_id
 from config import Config
 from consumer import Consumer
+from genders import GenderStore
 from pins import Pins
 from presence import Presence
 
@@ -27,6 +28,7 @@ class Client:
         self.commands = ChatCommands(self)
 
         self.pins = Pins(self.store.base / "pins.json")
+        self.genders = GenderStore(self.store.base.parent / "genders.json")
 
         self.pending_open: set[str] = set()
         self.joining: set[str] = set()

@@ -8,6 +8,7 @@ Features:
 - Channel browser with live search
 - Sidebar with online friends and channel users
 - BBCode rendering (bold, italic, colors, `[user]`, links, ...)
+- Character names colored by gender
 - Eicons shown as (animated) images directly in the chat
 - Pinned chats that are restored on startup
 - Login screen and character switching
@@ -106,6 +107,7 @@ Names and channel titles containing spaces work without quotes (`/priv Domenique
 | `ctrl+o` | Open the channel browser |
 | `ctrl+l` | Leave / close the current chat |
 | `ctrl+f` | Show or hide the sidebar (friends / channel users) |
+| `ctrl+t` | Minimize: detach and keep running in the background (needs the launcher) |
 | `up` / `down` | Browse previously sent input |
 | `ctrl+p` | Command palette |
 | `ctrl+q` | Quit |
@@ -133,7 +135,7 @@ The sidebar on the right has two tabs: *Friends* lists your friends that are onl
 | `eicon_max_age_hours` | `24` | After this time cached eicons are checked for changes |
 | `protocol`, `server`, `endpoint` | f-list chat server | Connection settings, usually left unchanged |
 
-Colors can be adjusted in `src/color_config.py`.
+Colors can be adjusted in `src/color_config.py`, including the gender colors (`GENDER_STYLES`). Names with unknown gender keep the default color.
 
 ## Files
 
@@ -142,6 +144,7 @@ Colors can be adjusted in `src/color_config.py`.
 | `src/config.json` | Configuration and credentials (permissions `600`) |
 | `src/chats/<character>/` | Chat logs per character, private chats and `channels/` |
 | `src/chats/<character>/pins.json` | Pinned chats |
+| `src/chats/genders.json` | Known genders of other characters, used for name colors |
 | `~/.cache/terminalchat/eicons/` | Eicon cache (respects `XDG_CACHE_HOME`) |
 | `src/debug.log` | Debug output |
 | `tmux.conf` | Settings for the launcher's tmux server |

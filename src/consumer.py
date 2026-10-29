@@ -108,9 +108,11 @@ class Consumer:
     async def on_character_list(self, data:dict) -> None:
         for entry in data.get("characters", []):
             self.client.set_online(entry[0], entry[2] if len(entry) > 2 else "online")
+            self.client.genders.set(entry[0], entry[1] if len(entry) > 1 else None)
 
     async def on_user_connected(self, data:dict) -> None:
         self.client.set_online(data["identity"], data.get("status", "online"))
+        self.client.genders.set(data["identity"], data.get("gender"))
 
     async def on_friends(self, data:dict) -> None:
         self.client.presence.set_friends(data.get("characters", []))

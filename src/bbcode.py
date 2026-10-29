@@ -4,7 +4,7 @@ from rich.style import Style
 from rich.text import Text
 
 from color_config import (BBCODE_COLORS, EICON_STYLE, ICON_STYLE, SPOILER_STYLE,
-                          URL_STYLE, USER_STYLE, make_style)
+                          URL_STYLE, USER_STYLE, NameStyle, make_style, no_name_style)
 from eicons import eicon_url
 
 
@@ -32,11 +32,12 @@ def tag_style(name:str, value:str | None) -> Style | None:
     return None
 
 
-def render_content_tag(text:Text, name:str, value:str | None, content:str, base:Style, show_eicons:bool) -> None:
+def render_content_tag(text:Text, name:str, value:str | None, content:str, base:Style, show_eicons:bool,
+                       name_style:NameStyle) -> None:
     if name == "user":
-        text.append(content, base + make_style(USER_STYLE))
+        text.append(content, base + make_style(USER_STYLE) + name_style(content))
     elif name == "icon":
-        text.append(f"[{content}]", base + make_style(ICON_STYLE))
+        text.append(f"[{content}]", base + make_style(ICON_STYLE) + name_style(content))
     elif name == "eicon":
         if not show_eicons:
             return
@@ -54,7 +55,8 @@ def find_close(source:str, name:str, start:int) -> int:
     return match.start() if match else -1
 
 
-def to_text(source:str, show_eicons:bool=True) -> Text:
+def to_text(source:str, show_eicons:bool=True, name_style:NameStyle | None=None) -> Text:
+    name_style = name_style or no_name_style
     text = Text()
     stack: list[tuple[str, Style]] = []
     position = 0
@@ -78,7 +80,7 @@ def to_text(source:str, show_eicons:bool=True) -> Text:
         if not closing and name in CONTENT_TAGS:
             end = find_close(source, name, position)
             if end >= 0:
-                render_content_tag(text, name, value, source[position:end], current(), show_eicons)
+                render_content_tag(text, name, value, source[position:end], current(), show_eicons, name_style)
                 position = end + len(name) + 3
                 continue
             text.append(match.group(0), current())

@@ -7,7 +7,7 @@ from pathlib import Path
 from rich.text import Text
 
 from bbcode import to_text
-from color_config import SENDER_STYLE, make_style
+from color_config import SENDER_STYLE, NameStyle, make_style, no_name_style
 
 
 USER = "user"
@@ -106,17 +106,18 @@ def format_line(sender:str, message:str) -> str:
     return f"[{timestamp}] {sender}: {message}"
 
 
-def split_line(line:str) -> tuple[Text, str]:
+def split_line(line:str, name_style:NameStyle | None=None) -> tuple[Text, str]:
+    name_style = name_style or no_name_style
     match = LINE_PATTERN.match(line)
     if not match:
         return Text(), line
     timestamp, sender, message = match.groups()
-    return Text.assemble(f"{timestamp} ", (sender, make_style(SENDER_STYLE)), ": "), message
+    return Text.assemble(f"{timestamp} ", (sender, make_style(SENDER_STYLE) + name_style(sender)), ": "), message
 
 
-def render_line(line:str, show_eicons:bool=True) -> Text:
-    header, message = split_line(line)
-    return Text.assemble(header, to_text(message, show_eicons))
+def render_line(line:str, show_eicons:bool=True, name_style:NameStyle | None=None) -> Text:
+    header, message = split_line(line, name_style)
+    return Text.assemble(header, to_text(message, show_eicons, name_style))
 
 
 def main() -> None:

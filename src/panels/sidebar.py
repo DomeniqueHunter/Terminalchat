@@ -1,22 +1,24 @@
+from rich.style import Style
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import OptionList, TabbedContent, TabPane
 from textual.widgets.option_list import Option
 
-from color_config import OP_STYLE, STATUS_STYLES, STATUS_SYMBOLS, make_style
+from color_config import OP_STYLE, STATUS_STYLES, STATUS_SYMBOLS, NameStyle, make_style, no_name_style
 
 
 Entry = tuple[str, str, bool]
 
 
-def render_entry(name:str, status:str, is_op:bool) -> Text:
+def render_entry(name:str, status:str, is_op:bool, name_style:NameStyle) -> Text:
     symbol = STATUS_SYMBOLS.get(status, STATUS_SYMBOLS["online"])
     style = STATUS_STYLES.get(status, STATUS_STYLES["online"])
     text = Text.assemble((symbol, make_style(style)), " ")
     if is_op:
         text.append("@", make_style(OP_STYLE))
-    text.append(name, make_style(OP_STYLE) if is_op else "")
+    base = make_style(OP_STYLE) if is_op else Style()
+    text.append(name, base + name_style(name))
     return text
 
 
@@ -44,6 +46,7 @@ class Sidebar(Vertical):
     def __init__(self, **kwargs:object) -> None:
         super().__init__(**kwargs)
         self.shown: dict[str, tuple] = {}
+        self.name_style: NameStyle = no_name_style
 
     def compose(self) -> ComposeResult:
         with TabbedContent(id="sidebar_tabs"):
@@ -67,7 +70,7 @@ class Sidebar(Vertical):
 
         view.clear_options()
         if entries:
-            view.add_options([Option(render_entry(*entry), id=entry[0]) for entry in entries])
+            view.add_options([Option(render_entry(*entry, self.name_style), id=entry[0]) for entry in entries])
             names = [entry[0] for entry in entries]
             if highlighted in names:
                 view.highlighted = names.index(highlighted)

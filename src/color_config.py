@@ -1,4 +1,5 @@
 import os
+from typing import Callable
 
 from rich.style import Style
 
@@ -33,6 +34,19 @@ STATUS_STYLES = {
     "crown": "#ffff55",
 }
 
+GENDER_STYLES = {
+    "male": "#6699ff",
+    "female": "#ff6699",
+    "transgender": "#ee8822",
+    "herm": "#9b30ff",
+    "male-herm": "#007fff",
+    "cunt-boy": "#00cc66",
+    "shemale": "#cc66ff",
+    "none": "#ffffbb",
+}
+
+NameStyle = Callable[[str], Style]
+
 BBCODE_COLORS = {
     "red": "#ff5555",
     "blue": "#5f87ff",
@@ -55,6 +69,15 @@ def make_style(spec:str) -> Style:
         return style
     return Style(bold=style.bold, dim=style.dim, italic=style.italic, underline=style.underline,
                  strike=style.strike, reverse=style.reverse, link=style.link)
+
+
+def gender_style(gender:str | None) -> Style:
+    color = GENDER_STYLES.get((gender or "").lower())
+    return make_style(color) if color else Style()
+
+
+def no_name_style(name:str) -> Style:
+    return Style()
 
 
 def main() -> None:

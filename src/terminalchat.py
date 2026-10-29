@@ -3,6 +3,8 @@
 import asyncio
 import html
 
+from rich.style import Style
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, OptionList, Static
@@ -11,6 +13,7 @@ import login
 from chat_store import CHANNEL, Chat
 from chat_widgets import ChatLine, HistoryInput
 from client import Client
+from color_config import gender_style
 from config import Config
 from eicons import EiconCache
 from panels.channels_list_panel import ChannelsList
@@ -23,6 +26,7 @@ from terminal_config import APP_BINDINGS, APP_CSS
 
 LIST_REFRESH_SECONDS = 300
 SIDEBAR_REFRESH_SECONDS = 1.0
+GENDER_SAVE_SECONDS = 30
 
 
 class ChatApp(App):
@@ -73,6 +77,8 @@ class ChatApp(App):
     async def on_mount(self) -> None:
         self.sidebar.display = bool(self.config.get("show_sidebar", False))
         self.set_interval(SIDEBAR_REFRESH_SECONDS, self.refresh_sidebar)
+        self.set_interval(GENDER_SAVE_SECONDS, self.save_genders)
+        self.sidebar.name_style = self.name_style
         self.sub_title = "offline"
         await self.reset_view()
         self.query_one("#chat_input", Input).focus()
@@ -129,7 +135,14 @@ class ChatApp(App):
         self.sub_title = "offline"
         self.show_login()
 
+    def save_genders(self) -> None:
+        self.client.genders.save()
+
+    def name_style(self, name:str) -> Style:
+        return gender_style(self.client.genders.get(name))
+
     async def shutdown_client(self) -> None:
+        self.save_genders()
         self.online = False
         self.workers.cancel_group(self, "receiver")
         self.workers.cancel_group(self, "periodic")
@@ -143,6 +156,7 @@ class ChatApp(App):
         await self.chat_view.mount(Static("No chats - press ctrl+o for the channel list or type /help", classes="placeholder"))
 
     async def on_unmount(self) -> None:
+        self.save_genders()
         await self.client.stop()
         if self.eicons is not None:
             await self.eicons.close()
@@ -242,7 +256,7 @@ class ChatApp(App):
         self.query_one("#chat_input", Input).focus()
 
     def chat_line(self, line:str) -> ChatLine:
-        return ChatLine(line, self.eicons, self.eicon_height)
+        return ChatLine(line, self.eicons, self.eicon_height, self.name_style)
 
     def first_chat_id(self) -> str | None:
         chats = list(self.client.store.chats.values())
@@ -253,7 +267,9 @@ class ChatApp(App):
         prefix = "#" if chat.kind == CHANNEL else "@"
         marker = "*" if chat.unread else " "
         pin = "+" if self.client.pins.is_pinned(chat) else " "
-        return ListItem(Label(f"{marker}{pin}{prefix}{html.unescape(chat.title)}", markup=False))
+        title = html.unescape(chat.title)
+        style = self.name_style(chat.key) if chat.kind != CHANNEL else Style()
+        return ListItem(Label(Text.assemble(f"{marker}{pin}{prefix}", (title, style))))
 
     async def rebuild_list(self) -> None:
         chats = list(self.client.store.chats.values())
