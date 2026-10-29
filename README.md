@@ -6,6 +6,7 @@ Features:
 
 - Public and private channels, private messages
 - Channel browser with live search
+- Sidebar with online friends and channel users
 - BBCode rendering (bold, italic, colors, `[user]`, links, ...)
 - Eicons shown as (animated) images directly in the chat
 - Pinned chats that are restored on startup
@@ -85,6 +86,7 @@ Type commands into the input line.
 | `/priv <character>` | Open a private chat with an online character |
 | `/me <text>` | Send an emote to the current chat |
 | `/channels` | Open the channel browser |
+| `/users` | Show or hide the sidebar with online friends and channel users |
 | `/pin` | Pin the current chat; pinned chats are restored on startup |
 | `/unpin` | Unpin the current chat |
 | `/pins` | Show all pinned chats |
@@ -103,12 +105,15 @@ Names and channel titles containing spaces work without quotes (`/priv Domenique
 |---|---|
 | `ctrl+o` | Open the channel browser |
 | `ctrl+l` | Leave / close the current chat |
+| `ctrl+f` | Show or hide the sidebar (friends / channel users) |
 | `up` / `down` | Browse previously sent input |
 | `ctrl+p` | Command palette |
 | `ctrl+q` | Quit |
 | `escape` | Close a dialog |
 
 In the chat list on the left, channels (`#`) are listed above private chats (`@`). A `*` marks unread messages, a `+` marks pinned chats.
+
+The sidebar on the right has two tabs: *Friends* lists your friends that are online, *Channel* lists the users of the open channel (channel operators first, marked with `@`). It switches to the matching tab when you change chats. Press `enter` on a name to open a private chat. Status symbols: `+` looking, `•` online, `~` idle/away, `-` busy, `x` do not disturb.
 
 ## Configuration
 
@@ -121,6 +126,7 @@ In the chat list on the left, channels (`#`) are listed above private chats (`@`
 | `character` | `""` | Character to log in with |
 | `remember_password` | `true` | Store the password in `config.json` |
 | `default_channels` | `[]` | Channels joined on every start |
+| `show_sidebar` | `false` | Show the sidebar on startup |
 | `eicons` | `"inline"` | `"inline"` shows eicons as images, `"off"` shows them as `:name:` links |
 | `eicon_height` | `4` | Eicon height in text lines |
 | `eicon_animate` | `true` | Animate eicons on startup (see `/gif`) |
