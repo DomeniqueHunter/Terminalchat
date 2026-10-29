@@ -2,8 +2,8 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Static
-from textual_image.widget import Image
 
+from animated_eicon import make_eicon_widget
 from bbcode import to_text
 from chat_store import render_line, split_line
 from color_config import EICON_STYLE, make_style
@@ -20,7 +20,7 @@ class ChatLine(Vertical):
         height: auto;
         width: 1fr;
     }
-    ChatLine Image {
+    ChatLine SixelEicon, ChatLine GenericEicon {
         width: auto;
     }
     ChatLine .missing {
@@ -64,11 +64,11 @@ class ChatLine(Vertical):
     async def load_row(self, row:Horizontal, names:list[str]) -> None:
         widgets = []
         for name in names:
-            image = await self.eicons.get(name)
-            if image is None:
+            eicon = await self.eicons.get(name)
+            if eicon is None:
                 widgets.append(Static(Text(f":{name}:", make_style(EICON_STYLE)), classes="missing"))
                 continue
-            widget = Image(image)
+            widget = make_eicon_widget(eicon)
             widget.styles.height = self.eicon_height
             widgets.append(widget)
 

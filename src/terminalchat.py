@@ -27,8 +27,11 @@ class ChatApp(App):
     def __init__(self, config:Config) -> None:
         super().__init__()
         self.client = Client(config, self)
-        self.eicons = EiconCache() if config.get("eicons", "inline") == "inline" else None
+        self.eicons = None
+        if config.get("eicons", "inline") == "inline":
+            self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
         self.eicon_height = int(config.get("eicon_height", 4))
+        self.gif_enabled = bool(config.get("eicon_animate", True))
         self.active_chat: str | None = None
         self.list_ids: list[str | None] = []
 

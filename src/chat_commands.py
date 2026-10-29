@@ -8,6 +8,7 @@ HELP_TEXT = (
     "/me <text>        emote in the current chat\n"
     "/pin, /unpin      (un)pin the current chat, restored on start\n"
     "/pins             show pinned chats\n"
+    "/gif [on|off]     toggle animated eicons\n"
     "/channels         open the channel list\n"
     "/quit             exit"
 )
@@ -34,6 +35,7 @@ class ChatCommands:
             "pin": self.cmd_pin,
             "unpin": self.cmd_unpin,
             "pins": self.cmd_pins,
+            "gif": self.cmd_gif,
             "help": self.cmd_help,
             "quit": self.cmd_quit,
         }
@@ -96,6 +98,17 @@ class ChatCommands:
             return
         lines = [f"{'#' if item['kind'] == 'channel' else '@'}{item.get('title') or item['key']}" for item in items]
         self.app.notify("\n".join(lines), title="Pinned", timeout=10)
+
+    async def cmd_gif(self, args:str) -> None:
+        value = args.lower()
+        if value in ("on", "off"):
+            self.app.gif_enabled = value == "on"
+        elif value:
+            self.app.notify("Usage: /gif [on|off]", severity="warning")
+            return
+        else:
+            self.app.gif_enabled = not self.app.gif_enabled
+        self.app.notify(f"Animated eicons {'on' if self.app.gif_enabled else 'off'}")
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()
