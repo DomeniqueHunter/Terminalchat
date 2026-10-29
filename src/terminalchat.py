@@ -224,6 +224,9 @@ class ChatApp(App):
         else:
             self.sidebar.update_list("members_list", "tab_channel", f"Channel ({len(members)})", members, "Nobody here")
 
+    async def action_minimize(self) -> None:
+        await self.client.commands.cmd_minimize("")
+
     def action_toggle_sidebar(self) -> None:
         self.sidebar.display = not self.sidebar.display
         if self.sidebar.display:

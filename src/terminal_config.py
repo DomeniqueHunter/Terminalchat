@@ -3,6 +3,7 @@ APP_BINDINGS = [
         ("ctrl+o", "open_channels_list", "Channels"),
         ("ctrl+l", "close_chat", "Close chat"),
         ("ctrl+f", "toggle_sidebar", "Users"),
+        ("ctrl+t", "minimize", "Minimize"),
     ]
 
 
