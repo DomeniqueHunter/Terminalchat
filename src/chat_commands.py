@@ -11,6 +11,13 @@ HELP_TEXT = (
 )
 
 
+def unquote(text:str) -> str:
+    text = text.strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+        return text[1:-1].strip()
+    return text
+
+
 class ChatCommands:
 
     def __init__(self, client:Any) -> None:
@@ -42,7 +49,7 @@ class ChatCommands:
         if not args:
             self.app.notify("Usage: /join <channel>", severity="warning")
             return
-        await self.client.join(args)
+        await self.client.join(unquote(args))
 
     async def cmd_leave(self, args:str) -> None:
         await self.app.action_close_chat()
@@ -51,7 +58,7 @@ class ChatCommands:
         if not args:
             self.app.notify("Usage: /priv <character>", severity="warning")
             return
-        await self.client.open_private(args)
+        await self.client.open_private(unquote(args))
 
     async def cmd_me(self, args:str) -> None:
         chat = self.app.current_chat()
