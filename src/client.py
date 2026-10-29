@@ -9,6 +9,7 @@ from chat_commands import ChatCommands
 from chat_store import CHANNEL, USER, Chat, ChatStore, make_id
 from config import Config
 from consumer import Consumer
+from pins import Pins
 
 
 class Client:
@@ -24,7 +25,10 @@ class Client:
         self.consumer = Consumer(self)
         self.commands = ChatCommands(self)
 
+        self.pins = Pins(self.store.base / "pins.json")
+
         self.pending_open: set[str] = set()
+        self.joining: set[str] = set()
         self.online: dict[str, str] = {}
 
     async def start(self) -> bool:
@@ -63,12 +67,25 @@ class Client:
             return
         if open_chat:
             self.pending_open.add(code)
+        if code in self.joining:
+            return
+        self.joining.add(code)
         await self.comm.message(opcode.JOIN_CHANNEL, {"channel": code})
+
+    async def restore_pins(self) -> None:
+        for item in self.pins.items:
+            if item["kind"] == CHANNEL:
+                self.store.get_or_create(item["key"], CHANNEL, item.get("title"))
+                await self.join(item["key"], open_chat=False)
+            else:
+                self.store.get_or_create(item["key"], USER, item.get("title"))
+        await self.app.rebuild_list()
 
     async def _join_method(self, code:str, name:str="", force:bool=False) -> None:
         await self.comm.message(opcode.JOIN_CHANNEL, {"channel": code})
 
     async def leave(self, code:str) -> None:
+        self.joining.discard(code)
         self.channel_manager.joined_channels.pop(code, None)
         await self.comm.message(opcode.LEAVE_CHANNEL, {"channel": code})
 
@@ -101,6 +118,7 @@ class Client:
         await self.app.show_line(chat.id, line)
 
     async def on_joined(self, code:str, title:str) -> None:
+        self.joining.discard(code)
         self.channel_manager.add_channel(Channel(title, code))
         chat = self.store.get_or_create(code, CHANNEL, title)
         if code in self.pending_open:

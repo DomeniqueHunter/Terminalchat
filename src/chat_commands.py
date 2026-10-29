@@ -6,6 +6,8 @@ HELP_TEXT = (
     "/leave            leave / close the current chat\n"
     "/priv <name>      open a private chat\n"
     "/me <text>        emote in the current chat\n"
+    "/pin, /unpin      (un)pin the current chat, restored on start\n"
+    "/pins             show pinned chats\n"
     "/channels         open the channel list\n"
     "/quit             exit"
 )
@@ -29,6 +31,9 @@ class ChatCommands:
             "priv": self.cmd_priv,
             "me": self.cmd_me,
             "channels": self.cmd_channels,
+            "pin": self.cmd_pin,
+            "unpin": self.cmd_unpin,
+            "pins": self.cmd_pins,
             "help": self.cmd_help,
             "quit": self.cmd_quit,
         }
@@ -65,6 +70,32 @@ class ChatCommands:
         if chat is None or not args:
             return
         await self.client.send(chat, f"/me {args}")
+
+    async def cmd_pin(self, args:str) -> None:
+        chat = self.app.current_chat()
+        if chat is None:
+            self.app.notify("No chat open", severity="warning")
+            return
+        if self.client.pins.pin(chat):
+            self.app.notify(f"Pinned {chat.title}")
+        await self.app.rebuild_list()
+
+    async def cmd_unpin(self, args:str) -> None:
+        chat = self.app.current_chat()
+        if chat is None:
+            self.app.notify("No chat open", severity="warning")
+            return
+        if self.client.pins.unpin(chat):
+            self.app.notify(f"Unpinned {chat.title}")
+        await self.app.rebuild_list()
+
+    async def cmd_pins(self, args:str) -> None:
+        items = self.client.pins.items
+        if not items:
+            self.app.notify("No pinned chats")
+            return
+        lines = [f"{'#' if item['kind'] == 'channel' else '@'}{item.get('title') or item['key']}" for item in items]
+        self.app.notify("\n".join(lines), title="Pinned", timeout=10)
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()

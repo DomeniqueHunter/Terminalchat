@@ -67,9 +67,13 @@ class ChatApp(App):
         self.run_worker(self.client.consumer.receive(), group="receiver")
         self.run_worker(self.periodic_worker(), group="periodic")
 
+        await self.client.restore_pins()
         defaults = self.client.config.get("default_channels") or []
         for index, channel in enumerate(defaults):
             await self.client.join(channel, open_chat=index == 0)
+        ids = self.client.store.ids()
+        if not defaults and ids and self.active_chat is None:
+            await self.open_chat(ids[0])
 
     async def periodic_worker(self) -> None:
         while True:
@@ -92,8 +96,9 @@ class ChatApp(App):
         for chat_id in self.list_ids:
             chat = chats[chat_id]
             prefix = "#" if chat.kind == CHANNEL else "@"
-            marker = "* " if chat.unread else "  "
-            items.append(ListItem(Label(f"{marker}{prefix}{html.unescape(chat.title)}", markup=False)))
+            marker = "*" if chat.unread else " "
+            pin = "+" if self.client.pins.is_pinned(chat) else " "
+            items.append(ListItem(Label(f"{marker}{pin}{prefix}{html.unescape(chat.title)}", markup=False)))
 
         await self.list_view.clear()
         if items:
