@@ -7,11 +7,11 @@ from rich.style import Style
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, OptionList, Static
+from textual.widgets import Footer, Input, Label, ListItem, ListView, OptionList, Static
 
 import login
 from chat_store import CHANNEL, Chat
-from chat_widgets import ChatLine, HistoryInput
+from chat_widgets import ChatLine, HistoryInput, StatusHeader
 from client import Client
 from color_config import gender_style
 from config import Config
@@ -50,7 +50,7 @@ class ChatApp(App):
         self.list_ids: list[str | None] = []
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield StatusHeader()
         with Horizontal(id="main"):
             yield ListView(id="chat_list")
             with Vertical(id="chat_container"):
@@ -58,6 +58,10 @@ class ChatApp(App):
                 yield HistoryInput(placeholder="Type message or /help ...", id="chat_input")
             yield Sidebar(id="sidebar")
         yield Footer()
+
+    def notify(self, message:str, *, title:str="", severity:str="information", timeout:float | None=None,
+               markup:bool=False) -> None:
+        super().notify(message, title=title, severity=severity, timeout=timeout, markup=markup)
 
     @property
     def list_view(self) -> ListView:
@@ -135,10 +139,12 @@ class ChatApp(App):
         self.sub_title = "offline"
         self.show_login()
 
+    def status_message(self) -> str:
+        return self.client.own_status.message if self.online else ""
+
     def update_subtitle(self) -> None:
-        status = self.client.own_status.status
-        suffix = "" if status == "online" else f" [{status}]"
-        self.sub_title = f"online as {self.client.character}{suffix}"
+        self.sub_title = f"{self.client.own_status.status} \u2014 as {self.client.character}"
+        self.query_one(StatusHeader).refresh_title()
 
     def save_genders(self) -> None:
         self.client.genders.save()
