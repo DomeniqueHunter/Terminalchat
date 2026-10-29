@@ -1,4 +1,5 @@
 import asyncio
+import html
 import os
 import re
 from typing import Any, Awaitable, Callable
@@ -17,6 +18,7 @@ COMMAND_INFO = [
     ("leave", "", "leave / close the current chat"),
     ("priv", "<name>", "open a private chat"),
     ("invite", "<name>", "invite a character into the current channel"),
+    ("code", "", "copy the current channel as [session] link"),
     ("makeroom", "<title>", "create a private channel"),
     ("openroom", "", "make the current private channel public"),
     ("closeroom", "", "make the current private channel invite-only"),
@@ -82,6 +84,7 @@ class ChatCommands:
             "close": self.cmd_leave,
             "priv": self.cmd_priv,
             "invite": self.cmd_invite,
+            "code": self.cmd_code,
             "makeroom": self.cmd_makeroom,
             "create": self.cmd_makeroom,
             "openroom": self.cmd_openroom,
@@ -187,6 +190,14 @@ class ChatCommands:
             return
         name = self.client.find_online(name) or name
         await self.client.channel_command(op, {"channel": chat.key, "character": name})
+
+    async def cmd_code(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is None:
+            return
+        code = f"[session={html.unescape(chat.title)}]{chat.key}[/session]"
+        self.app.copy_to_clipboard(code)
+        self.app.notify(code, title="Channel code copied to clipboard", timeout=15)
 
     async def cmd_makeroom(self, args:str) -> None:
         title = unquote(args)
