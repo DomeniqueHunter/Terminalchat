@@ -2,6 +2,10 @@
 
 import asyncio
 import html
+import os
+import shutil
+import subprocess
+import sys
 
 from rich.style import Style
 from rich.text import Text
@@ -140,6 +144,16 @@ class ChatApp(App):
         await self.reset_view()
         self.sub_title = "offline"
         self.show_login()
+
+    def open_link(self, url:str) -> None:
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        graphical = sys.platform == "darwin" or os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+        if graphical and not os.environ.get("SSH_CONNECTION") and shutil.which(opener):
+            subprocess.Popen([opener, url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            self.notify(url, title="Opening link")
+            return
+        self.copy_to_clipboard(url)
+        self.notify(url, title="Link copied to clipboard", timeout=15)
 
     def status_message(self) -> str:
         return self.client.own_status.message if self.online else ""

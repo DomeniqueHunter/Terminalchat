@@ -69,6 +69,13 @@ class ChatLine(Vertical):
                 self.rows.append((row, names))
                 yield row
 
+    def on_click(self, event:Click) -> None:
+        link = event.style.link
+        open_link = getattr(self.app, "open_link", None)
+        if link and open_link is not None:
+            event.stop()
+            open_link(link)
+
     def on_mount(self) -> None:
         for row, names in self.rows:
             self.run_worker(self.load_row(row, names))
