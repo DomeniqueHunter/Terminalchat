@@ -33,6 +33,7 @@ class Client:
         self.own_status = OwnStatus(self.store.base / "status.json")
 
         self.pending_open: set[str] = set()
+        self.pending_create: set[str] = set()
         self.joining: set[str] = set()
         self.presence = Presence(app.presence_changed)
 
@@ -145,8 +146,9 @@ class Client:
         self.joining.discard(code)
         self.channel_manager.add_channel(Channel(title, code))
         chat = self.store.get_or_create(code, CHANNEL, title)
-        if code in self.pending_open:
+        if code in self.pending_open or title.lower() in self.pending_create:
             self.pending_open.discard(code)
+            self.pending_create.discard(title.lower())
             await self.app.open_chat(chat.id)
         else:
             await self.app.rebuild_list()
@@ -157,6 +159,31 @@ class Client:
         chat_id = make_id(CHANNEL, code)
         self.store.remove(chat_id)
         await self.app.chat_removed(chat_id)
+
+    async def channel_command(self, op:str, payload:dict) -> None:
+        await self.comm.message(op, payload)
+
+    async def create_room(self, title:str) -> None:
+        self.pending_create.add(title.lower())
+        await self.comm.message(opcode.CREATE_PRIVATE_CHANNEL, {"channel": title})
+
+    async def on_channel_event(self, code:str, text:str, removed:str="") -> None:
+        if removed:
+            self.presence.remove_member(code, removed)
+        if removed and self.is_me(removed):
+            self.app.notify(text, severity="warning", timeout=15)
+            await self.on_left(code)
+            return
+        if self.store.find(CHANNEL, code):
+            await self.on_channel_message(code, "System", text)
+
+    async def invite(self, code:str, name:str) -> None:
+        await self.comm.message(opcode.INVITE, {"channel": code, "character": name})
+
+    def on_invited(self, sender:str, code:str, title:str) -> None:
+        if code not in self.channel_manager.open_private_channels:
+            self.channel_manager.open_private_channels[code] = Channel(title, code)
+        self.app.notify(f"{sender} invited you to {title}\n/join {title}", title="Invitation", timeout=30)
 
     async def roll(self, chat:Chat, dice:str) -> None:
         if chat.kind == CHANNEL:

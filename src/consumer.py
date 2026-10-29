@@ -34,6 +34,10 @@ class Consumer:
             opcode.DEMOTE_OP: self.on_op_removed,
             opcode.USER_CONNECTED: self.on_user_connected,
             opcode.GONE_OFFLINE: self.on_user_offline,
+            opcode.INVITE: self.on_invite,
+            opcode.KICK: self.on_kick,
+            opcode.BAN: self.on_ban,
+            opcode.TIMEOUT: self.on_timeout,
             opcode.ERROR: self.on_error,
             opcode.SYSTEM_MESSAGE: self.on_system,
         }
@@ -140,6 +144,23 @@ class Consumer:
 
     async def on_user_offline(self, data:dict) -> None:
         self.client.set_offline(data["character"])
+
+    async def on_kick(self, data:dict) -> None:
+        name = data.get("character", "")
+        await self.client.on_channel_event(data["channel"], f"{data.get('operator', '?')} kicked {name}", name)
+
+    async def on_ban(self, data:dict) -> None:
+        name = data.get("character", "")
+        await self.client.on_channel_event(data["channel"], f"{data.get('operator', '?')} banned {name}", name)
+
+    async def on_timeout(self, data:dict) -> None:
+        name = data.get("character", "")
+        text = f"{data.get('operator', '?')} timed out {name} for {data.get('length', '?')} minutes"
+        await self.client.on_channel_event(data["channel"], text, name)
+
+    async def on_invite(self, data:dict) -> None:
+        code = data.get("name", "")
+        self.client.on_invited(data.get("sender", "?"), code, data.get("title") or code)
 
     async def on_error(self, data:dict) -> None:
         self.app.notify(f"Error {data.get('number')}: {data.get('message')}", severity="error")

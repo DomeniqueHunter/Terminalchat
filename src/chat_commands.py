@@ -4,6 +4,7 @@ import re
 from typing import Any, Awaitable, Callable
 
 from chat_store import CHANNEL
+from fchat import Opcode as opcode
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
 
 
@@ -15,6 +16,20 @@ COMMAND_INFO = [
     ("join", "<channel>", "join a channel (name or code)"),
     ("leave", "", "leave / close the current chat"),
     ("priv", "<name>", "open a private chat"),
+    ("invite", "<name>", "invite a character into the current channel"),
+    ("makeroom", "<title>", "create a private channel"),
+    ("openroom", "", "make the current private channel public"),
+    ("closeroom", "", "make the current private channel invite-only"),
+    ("kick", "<name>", "kick a character from the current channel"),
+    ("ban", "<name>", "ban a character from the current channel"),
+    ("unban", "<name>", "unban a character"),
+    ("banlist", "", "show the ban list of the current channel"),
+    ("timeout", "<name> <minutes>", "time out a character"),
+    ("op", "<name>", "make a character channel operator"),
+    ("deop", "<name>", "remove channel operator rights"),
+    ("setowner", "<name>", "hand the channel over to a character"),
+    ("setdescription", "<text>", "set the channel description"),
+    ("setmode", "<chat|ads|both>", "allow chat, ads or both"),
     ("me", "<text>", "emote in the current chat"),
     ("roll", "[dice]", "roll dice on the server, e.g. 2d6+3 (default 1d6)"),
     ("bottle", "", "spin the bottle (channels only)"),
@@ -65,6 +80,21 @@ class ChatCommands:
             "leave": self.cmd_leave,
             "close": self.cmd_leave,
             "priv": self.cmd_priv,
+            "invite": self.cmd_invite,
+            "makeroom": self.cmd_makeroom,
+            "create": self.cmd_makeroom,
+            "openroom": self.cmd_openroom,
+            "closeroom": self.cmd_closeroom,
+            "kick": self.cmd_kick,
+            "ban": self.cmd_ban,
+            "unban": self.cmd_unban,
+            "banlist": self.cmd_banlist,
+            "timeout": self.cmd_timeout,
+            "op": self.cmd_op,
+            "deop": self.cmd_deop,
+            "setowner": self.cmd_setowner,
+            "setdescription": self.cmd_setdescription,
+            "setmode": self.cmd_setmode,
             "me": self.cmd_me,
             "roll": self.cmd_roll,
             "bottle": self.cmd_bottle,
@@ -117,6 +147,109 @@ class ChatCommands:
         if chat is None or not args:
             return
         await self.client.send(chat, f"/me {args}")
+
+    async def cmd_invite(self, args:str) -> None:
+        chat = self.app.current_chat()
+        if chat is None or chat.kind != CHANNEL:
+            self.app.notify("/invite only works in a channel", severity="warning")
+            return
+        name = unquote(args)
+        if not name:
+            self.app.notify("Usage: /invite <character>", severity="warning")
+            return
+        name = self.client.find_online(name) or name
+        await self.client.invite(chat.key, name)
+        self.app.notify(f"Invited {name} to {chat.title}")
+
+    def current_channel(self) -> Any:
+        chat = self.app.current_chat()
+        if chat is None or chat.kind != CHANNEL:
+            self.app.notify("This command only works in a channel", severity="warning")
+            return None
+        return chat
+
+    async def channel_name_command(self, op:str, args:str, usage:str) -> None:
+        chat = self.current_channel()
+        if chat is None:
+            return
+        name = unquote(args)
+        if not name:
+            self.app.notify(f"Usage: {usage}", severity="warning")
+            return
+        name = self.client.find_online(name) or name
+        await self.client.channel_command(op, {"channel": chat.key, "character": name})
+
+    async def cmd_makeroom(self, args:str) -> None:
+        title = unquote(args)
+        if not title:
+            self.app.notify("Usage: /makeroom <title>", severity="warning")
+            return
+        await self.client.create_room(title)
+
+    async def cmd_openroom(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is not None:
+            await self.client.channel_command(opcode.SET_PRIVATE_CHANNEL_STATE, {"channel": chat.key, "status": "public"})
+
+    async def cmd_closeroom(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is not None:
+            await self.client.channel_command(opcode.SET_PRIVATE_CHANNEL_STATE, {"channel": chat.key, "status": "private"})
+
+    async def cmd_kick(self, args:str) -> None:
+        await self.channel_name_command(opcode.KICK, args, "/kick <name>")
+
+    async def cmd_ban(self, args:str) -> None:
+        await self.channel_name_command(opcode.BAN, args, "/ban <name>")
+
+    async def cmd_unban(self, args:str) -> None:
+        await self.channel_name_command(opcode.UNBAN, args, "/unban <name>")
+
+    async def cmd_op(self, args:str) -> None:
+        await self.channel_name_command(opcode.PROMOTE_OP, args, "/op <name>")
+
+    async def cmd_deop(self, args:str) -> None:
+        await self.channel_name_command(opcode.DEMOTE_OP, args, "/deop <name>")
+
+    async def cmd_setowner(self, args:str) -> None:
+        await self.channel_name_command(opcode.SET_CHANNEL_OWNER, args, "/setowner <name>")
+
+    async def cmd_banlist(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is not None:
+            await self.client.channel_command(opcode.BANLIST, {"channel": chat.key})
+
+    async def cmd_timeout(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is None:
+            return
+        name_part, _, minutes = args.strip().rpartition(" ")
+        name = unquote(name_part)
+        if not name or not minutes.isdigit() or int(minutes) < 1:
+            self.app.notify("Usage: /timeout <name> <minutes>", severity="warning")
+            return
+        name = self.client.find_online(name) or name
+        payload = {"channel": chat.key, "character": name, "length": int(minutes)}
+        await self.client.channel_command(opcode.TIMEOUT, payload)
+
+    async def cmd_setdescription(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is None:
+            return
+        if not args.strip():
+            self.app.notify("Usage: /setdescription <text>", severity="warning")
+            return
+        await self.client.channel_command(opcode.CHANNEL_DESCRIPTION, {"channel": chat.key, "description": args.strip()})
+
+    async def cmd_setmode(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is None:
+            return
+        mode = args.strip().lower()
+        if mode not in ("chat", "ads", "both"):
+            self.app.notify("Usage: /setmode <chat|ads|both>", severity="warning")
+            return
+        await self.client.channel_command(opcode.SET_CHANNEL_MODE, {"channel": chat.key, "mode": mode})
 
     async def cmd_roll(self, args:str) -> None:
         chat = self.app.current_chat()

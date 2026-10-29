@@ -86,7 +86,10 @@ Type commands into the input line.
 | `/join <channel>` | Join a channel by name or code (e.g. `/join Development`, `/join ADH-...`) |
 | `/leave` | Leave or close the current chat (alias: `/close`) |
 | `/priv <character>` | Open a private chat with an online character |
+| `/invite <character>` | Invite a character into the current (private) channel; when you are invited, a notification shows how to join |
 | `/me <text>` | Send an emote to the current chat |
+| `/roll [dice]` | Roll dice on the server, visible to everyone in the chat (e.g. `/roll 1d20`, `/roll 2d6+3`); default `1d6` |
+| `/bottle` | Spin the bottle (channels only) |
 | `/channels` | Open the channel browser |
 | `/users` | Show or hide the sidebar with online friends and channel users |
 | `/pin` | Pin the current chat; pinned chats are restored on startup |
@@ -105,6 +108,26 @@ Type commands into the input line.
 While typing a `/`, a list of matching commands with a short description appears above the input line. The best match is suggested in grey: press `→` to accept it, or `tab` to complete the command as far as it is unambiguous.
 
 Names and channel titles containing spaces work without quotes (`/priv Domenique Hunter`); quotes are accepted as well.
+
+### Channel management
+
+These commands act on the open channel. The server decides whether you are allowed to use them (channel owner or operator); if not, its error message is shown.
+
+| Command | Description |
+|---|---|
+| `/makeroom <title>` | Create a private channel and open it (alias: `/create`) |
+| `/openroom` | List the private channel publicly |
+| `/closeroom` | Make the private channel invite-only again |
+| `/kick <name>` | Kick a character |
+| `/ban <name>` / `/unban <name>` | Ban / unban a character |
+| `/banlist` | Show the ban list |
+| `/timeout <name> <minutes>` | Time out a character |
+| `/op <name>` / `/deop <name>` | Give / remove operator rights |
+| `/setowner <name>` | Hand the channel over |
+| `/setdescription <text>` | Set the channel description |
+| `/setmode <chat\|ads\|both>` | Allow chat messages, ads or both |
+
+Kicks, bans and timeouts announced by the server appear as system lines in the channel.
 
 ## Key bindings
 
