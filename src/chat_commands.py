@@ -5,25 +5,40 @@ from typing import Any, Awaitable, Callable
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
 
 
-HELP_TEXT = (
-    "/join <channel>   join a channel (name or code)\n"
-    "/leave            leave / close the current chat\n"
-    "/priv <name>      open a private chat\n"
-    "/me <text>        emote in the current chat\n"
-    "/status [s] [msg] set status (online looking busy dnd idle away)\n"
-    "/status <text>    set only the status message\n"
-    "/status:flag <s>  change only the status\n"
-    "/status:message [text]  change only the message (empty clears it)\n"
-    "/pin, /unpin      (un)pin the current chat, restored on start\n"
-    "/pins             show pinned chats\n"
-    "/gif [on|off]     toggle animated eicons\n"
-    "/char [name]      switch character\n"
-    "/logout           log out and forget password\n"
-    "/minimize         detach, keep running in background\n"
-    "/channels         open the channel list\n"
-    "/users            show/hide friends and channel users\n"
-    "/quit             exit"
-)
+COMMAND_INFO = [
+    ("join", "<channel>", "join a channel (name or code)"),
+    ("leave", "", "leave / close the current chat"),
+    ("priv", "<name>", "open a private chat"),
+    ("me", "<text>", "emote in the current chat"),
+    ("status", "[status] [text]", "set status and/or status message"),
+    ("status:flag", "<status>", "change only the status"),
+    ("status:message", "[text]", "change only the message (empty clears it)"),
+    ("channels", "", "open the channel list"),
+    ("users", "", "show/hide friends and channel users"),
+    ("pin", "", "pin the current chat, restored on start"),
+    ("unpin", "", "unpin the current chat"),
+    ("pins", "", "show pinned chats"),
+    ("gif", "[on|off]", "toggle animated eicons"),
+    ("char", "[name]", "switch character"),
+    ("logout", "", "log out and forget password"),
+    ("minimize", "", "detach, keep running in background"),
+    ("help", "", "show all commands"),
+    ("quit", "", "exit"),
+]
+
+COMMAND_NAMES = [name for name, _, _ in COMMAND_INFO]
+
+
+def command_usage(name:str, args:str) -> str:
+    return f"/{name} {args}".rstrip()
+
+
+def matching_commands(prefix:str) -> list[tuple[str, str, str]]:
+    prefix = prefix.lower()
+    return [entry for entry in COMMAND_INFO if entry[0].startswith(prefix)]
+
+
+HELP_TEXT = "\n".join(f"{command_usage(name, args):<26} {description}" for name, args, description in COMMAND_INFO)
 
 
 def unquote(text:str) -> str:

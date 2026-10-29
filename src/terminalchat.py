@@ -11,7 +11,7 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView, OptionList
 
 import login
 from chat_store import CHANNEL, Chat
-from chat_widgets import ChatLine, HistoryInput, StatusHeader
+from chat_widgets import ChatLine, CommandHints, HistoryInput, StatusHeader
 from client import Client
 from color_config import gender_style
 from config import Config
@@ -55,6 +55,7 @@ class ChatApp(App):
             yield ListView(id="chat_list")
             with Vertical(id="chat_container"):
                 yield VerticalScroll(id="chat_view")
+                yield CommandHints(id="command_hints")
                 yield HistoryInput(placeholder="Type message or /help ...", id="chat_input")
             yield Sidebar(id="sidebar")
         yield Footer()
@@ -368,6 +369,10 @@ class ChatApp(App):
             await self.client.leave(chat.key)
         self.client.store.remove(chat.id)
         await self.chat_removed(chat.id)
+
+    def on_input_changed(self, event:Input.Changed) -> None:
+        if event.input.id == "chat_input":
+            self.query_one(CommandHints).show_for(event.value)
 
     async def on_input_submitted(self, event:Input.Submitted) -> None:
         if event.input.id != "chat_input":

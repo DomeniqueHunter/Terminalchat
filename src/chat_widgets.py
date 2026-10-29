@@ -1,16 +1,20 @@
+import os
+
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.events import Click
 from textual.binding import Binding
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.content import Content
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
+from textual.events import Click
+from textual.suggester import SuggestFromList
 from textual.widgets import Header, Input, Static
 from textual.widgets._header import HeaderTitle
 
 from animated_eicon import make_eicon_widget
 from bbcode import to_text
+from chat_commands import COMMAND_NAMES, command_usage, matching_commands
 from chat_store import render_line, split_line
 from color_config import EICON_STYLE, NameStyle, make_style
 from eicons import MAX_PER_MESSAGE, EiconCache, extract_eicons
@@ -92,10 +96,12 @@ class HistoryInput(Input):
     BINDINGS = [
         Binding("up", "history_prev", show=False),
         Binding("down", "history_next", show=False),
+        Binding("tab", "complete", show=False),
     ]
 
     def __init__(self, *args:object, max_history:int=100, **kwargs:object) -> None:
-        super().__init__(*args, **kwargs)
+        suggester = SuggestFromList([f"/{name}" for name in COMMAND_NAMES], case_sensitive=False)
+        super().__init__(*args, suggester=suggester, **kwargs)
         self.max_history = max_history
         self.history: list[str] = []
         self.position: int | None = None
@@ -132,6 +138,17 @@ class HistoryInput(Input):
         else:
             self.set_text(self.history[self.position])
 
+    def action_complete(self) -> None:
+        if not self.value.startswith("/") or " " in self.value:
+            self.app.action_focus_next()
+            return
+        names = [name for name, _, _ in matching_commands(self.value[1:])]
+        if not names:
+            return
+        completion = names[0] + " " if len(names) == 1 else os.path.commonprefix(names)
+        if len(completion) >= len(self.value) - 1:
+            self.set_text("/" + completion)
+
 
 class StatusHeader(Header):
 
@@ -161,3 +178,47 @@ class StatusHeader(Header):
         if not message:
             return Content.assemble(title, "\n", Content("(no status message)").stylize("dim"))
         return Content.assemble(title, "\n", Content.from_rich_text(to_text(message, False)))
+
+
+MAX_HINTS = 12
+
+
+class CommandHints(Static):
+
+    DEFAULT_CSS = """
+    CommandHints {
+        height: auto;
+        max-height: 12;
+        padding: 0 1;
+        background: $panel;
+        color: $text-muted;
+        display: none;
+    }
+    """
+
+    def show_for(self, value:str) -> None:
+        if not value.startswith("/") or " " in value:
+            self.display = False
+            return
+        typed = value[1:].lower()
+        matches = matching_commands(typed)
+        if not matches:
+            self.display = False
+            return
+        hidden = len(matches) - MAX_HINTS + 1 if len(matches) > MAX_HINTS else 0
+        shown = matches[:len(matches) - hidden] if hidden else matches
+        width = max(len(command_usage(name, args)) for name, args, _ in shown) + 2
+        text = Text()
+        for index, (name, args, description) in enumerate(shown):
+            usage = command_usage(name, args)
+            if index:
+                text.append("\n")
+            text.append("/" + name[:len(typed)], "bold")
+            text.append(name[len(typed):] + usage[len(name) + 1:])
+            text.append(" " * (width - len(usage)))
+            text.append(description, "dim")
+        if hidden:
+            text.append(f"\n... {hidden} more, keep typing", "dim italic")
+        self.update(text)
+        self.display = True
+

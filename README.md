@@ -93,12 +93,16 @@ Type commands into the input line.
 | `/unpin` | Unpin the current chat |
 | `/pins` | Show all pinned chats |
 | `/status [status] [message]` | Set your status (`online`, `looking`, `busy`, `dnd`, `idle`, `away`) and an optional message (max. 255 characters). If the first word is not a status, the whole text becomes the message and the status is kept (`/status back in 5`); without arguments the current status is shown. The status is stored per character and restored after every login; `/status online` resets it |
+| `/status:flag <status>` | Change only the status, keep the message |
+| `/status:message [text]` | Change only the message, keep the status; without text the message is cleared |
 | `/gif [on\|off]` | Turn eicon animation on or off; without argument it toggles |
 | `/char [name]` | Switch character; without a name a character picker opens |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/help` | Show the command list |
 | `/quit` | Exit |
+
+While typing a `/`, a list of matching commands with a short description appears above the input line. The best match is suggested in grey: press `→` to accept it, or `tab` to complete the command as far as it is unambiguous.
 
 Names and channel titles containing spaces work without quotes (`/priv Domenique Hunter`); quotes are accepted as well.
 
