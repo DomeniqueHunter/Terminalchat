@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SESSION="terminalchat"
+SOCKET="terminalchat"
+BASE_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PYTHON="${BASE_DIR}/venv/bin/python3"
+[[ -x "${PYTHON}" ]] || PYTHON="python3"
+
+if ! command -v tmux >/dev/null 2>&1; then
+    echo "tmux not found - starting without background support (/minimize unavailable)" >&2
+    cd "${BASE_DIR}/src"
+    exec "${PYTHON}" terminalchat.py
+fi
+
+tmux_cmd() {
+    env -u TMUX tmux -L "${SOCKET}" -f "${BASE_DIR}/tmux.conf" "$@"
+}
+
+if ! tmux_cmd has-session -t "${SESSION}" 2>/dev/null; then
+    env_args=()
+    if [[ -n "${NO_COLOR:-}" ]]; then
+        env_args+=(-e "NO_COLOR=${NO_COLOR}")
+    fi
+    tmux_cmd new-session -d -s "${SESSION}" \
+        -x "$(tput cols 2>/dev/null || echo 120)" -y "$(tput lines 2>/dev/null || echo 40)" \
+        -c "${BASE_DIR}/src" "${env_args[@]}" "${PYTHON}" terminalchat.py
+fi
+
+exec env -u TMUX tmux -L "${SOCKET}" -f "${BASE_DIR}/tmux.conf" attach-session -d -t "${SESSION}"

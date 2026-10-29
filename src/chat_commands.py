@@ -1,3 +1,5 @@
+import asyncio
+import os
 from typing import Any, Awaitable, Callable
 
 
@@ -11,6 +13,7 @@ HELP_TEXT = (
     "/gif [on|off]     toggle animated eicons\n"
     "/char [name]      switch character\n"
     "/logout           log out and forget password\n"
+    "/minimize         detach, keep running in background\n"
     "/channels         open the channel list\n"
     "/quit             exit"
 )
@@ -40,6 +43,8 @@ class ChatCommands:
             "gif": self.cmd_gif,
             "char": self.cmd_char,
             "logout": self.cmd_logout,
+            "minimize": self.cmd_minimize,
+            "detach": self.cmd_minimize,
             "help": self.cmd_help,
             "quit": self.cmd_quit,
         }
@@ -132,6 +137,16 @@ class ChatCommands:
 
     async def cmd_logout(self, args:str) -> None:
         await self.app.logout()
+
+    async def cmd_minimize(self, args:str) -> None:
+        if not os.environ.get("TMUX"):
+            self.app.notify("/minimize needs the 'terminalchat' launcher (runs inside tmux)", severity="warning")
+            return
+        process = await asyncio.create_subprocess_exec(
+            "tmux", "detach-client", stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL
+        )
+        if await process.wait() != 0:
+            self.app.notify("Could not detach from tmux", severity="error")
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()
