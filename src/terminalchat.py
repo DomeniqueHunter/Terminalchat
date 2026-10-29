@@ -59,6 +59,10 @@ class ChatApp(App):
             yield Sidebar(id="sidebar")
         yield Footer()
 
+    def notify(self, message:str, *, title:str="", severity:str="information", timeout:float | None=None,
+               markup:bool=False) -> None:
+        super().notify(message, title=title, severity=severity, timeout=timeout, markup=markup)
+
     @property
     def list_view(self) -> ListView:
         return self.query_one("#chat_list", ListView)
