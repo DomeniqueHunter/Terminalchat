@@ -1,109 +1,78 @@
+import html
+from typing import Any
+
 from textual.app import ComposeResult
-from textual.screen import ModalScreen
-from textual.widgets import Static, Input, ListView, ListItem, Label
 from textual.containers import Horizontal, Vertical
+from textual.screen import ModalScreen
+from textual.widgets import Input, Label, ListItem, ListView, Static
 
 from terminal_config import CHANNELS_CSS
-from fchat import Opcode as opcode
-from chat_log import logging
+
+
+MAX_ENTRIES = 500
+
+
+class ChannelItem(ListItem):
+
+    def __init__(self, code:str, title:str) -> None:
+        super().__init__(Label(f"#{html.unescape(title)}", markup=False))
+        self.code = code
 
 
 class ChannelsList(ModalScreen):
 
     CSS = CHANNELS_CSS
 
-    def __init__(self, main=None):
+    def __init__(self, client:Any) -> None:
         super().__init__()
-        self.main = main
-
-        self.public_filter = ""
-        self.private_filter = ""
-
-        self.public_list: ListView | None = None
-        self.private_list: ListView | None = None
+        self.client = client
+        self.filters = {"public": "", "private": ""}
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="container"):
-
             with Vertical(classes="panel"):
-                yield Static("Public Chats")
+                yield Static("Public Channels")
                 yield Input(placeholder="search public...", id="public_search")
                 yield ListView(id="public_list")
 
             with Vertical(classes="panel"):
-                yield Static("Private Chats")
+                yield Static("Private Channels")
                 yield Input(placeholder="search private...", id="private_search")
                 yield ListView(id="private_list")
 
-    def on_mount(self) -> None:
-        self.public_list = self.query_one("#public_list", ListView)
-        self.private_list = self.query_one("#private_list", ListView)
+    async def on_mount(self) -> None:
+        await self.render_lists()
+        self.query_one("#public_search", Input).focus()
 
-        self.render_lists()
-        self.set_focus(self.public_list)
+    def entries(self, kind:str) -> list[tuple[str, str]]:
+        manager = self.client.channel_manager
+        source = manager.official_channels if kind == "public" else manager.open_private_channels
+        needle = self.filters[kind].lower()
+        items = [(code, channel.name) for code, channel in source.items() if needle in channel.name.lower()]
+        return sorted(items, key=lambda item: item[1].lower())[:MAX_ENTRIES]
 
-    def render_lists(self) -> None:
-        self.public_list.clear()
-        self.private_list.clear()
+    async def render_lists(self) -> None:
+        for kind in ("public", "private"):
+            view = self.query_one(f"#{kind}_list", ListView)
+            await view.clear()
+            items = [ChannelItem(code, title) for code, title in self.entries(kind)]
+            if items:
+                await view.extend(items)
+                view.index = 0
+            else:
+                await view.append(ListItem(Label("(loading / no match)")))
 
-        pf = self.public_filter.lower()
-        pr = self.private_filter.lower()
+    async def on_input_changed(self, event:Input.Changed) -> None:
+        kind = "public" if event.input.id == "public_search" else "private"
+        self.filters[kind] = event.value.strip()
+        await self.render_lists()
 
-        for code, channel in self.main.channel_manager.official_channels.items():
-            name = str(channel)
-
-            if pf in name.lower():
-                item = ListItem(Label(f"#{name}"))
-                item.channel = channel
-                self.public_list.append(item)
-
-        for code, channel in self.main.channel_manager.open_private_channels.items():
-            name = channel.name
-
-            if pr in name.lower():
-                item = ListItem(Label(f"#{name}"))
-                item.channel = channel
-                self.private_list.append(item)
-
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        channel = event.item.channel
-        self.call_later(lambda: self._join(channel))
-
-    async def _join(self, channel) -> None:
-        logging("debug.log", f"join: {channel}\n")
-
-        await self.join_channel(channel)
-
-        key = channel.name if hasattr(channel, "name") else str(channel)
-
-        if self.main:
-            self.main.chats.setdefault(key, [])
-
-            if hasattr(self.main, "rebuild_list"):
-                self.main.rebuild_list()
-
-            if hasattr(self.main, "open_chat"):
-                self.main.open_chat(key)
-
+    async def on_list_view_selected(self, event:ListView.Selected) -> None:
+        if not isinstance(event.item, ChannelItem):
+            return
         self.app.pop_screen()
+        await self.client.join(event.item.code)
 
-    async def join_channel(self, channel) -> None:
-        if self.main:
-            payload = {"channel": channel.code}
-            await self.main.comm.message(opcode.JOIN_CHANNEL, payload)
-
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        value = event.value.strip()
-
-        if event.input.id == "public_search":
-            self.public_filter = value
-
-        elif event.input.id == "private_search":
-            self.private_filter = value
-
-        self.render_lists()
-        event.input.value = ""
-
-    def on_key(self, event) -> None:
+    def on_key(self, event:Any) -> None:
         if event.key == "escape":
             self.app.pop_screen()

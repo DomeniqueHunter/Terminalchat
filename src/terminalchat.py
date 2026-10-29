@@ -1,228 +1,187 @@
 #!/usr/bin/env python3
 
-from typing import Dict, List, Set
-
 import asyncio
-import json
-
-from datetime import datetime
-from pathlib import Path
+import html
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
+from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
 
-from terminal_config import APP_CSS, APP_BINDINGS
+from chat_store import CHANNEL, Chat, render_line
+from client import Client
 from config import Config
-from consumer import Consumer
-from chat_log import logging
-
-from fchat import Opcode as opcode
-from fchat import Communication
-from fchat import ChannelManager
-
-from chat_commands import ChatCommands
-
 from panels.channels_list_panel import ChannelsList
+from terminal_config import APP_BINDINGS, APP_CSS
+
+
+LIST_REFRESH_SECONDS = 300
 
 
 class ChatApp(App):
     BINDINGS = APP_BINDINGS
     CSS = APP_CSS
+    TITLE = "Terminal Chat"
 
-    def __init__(self) -> None:
+    def __init__(self, config:Config) -> None:
         super().__init__()
-
-        self.chats: Dict[str, List[dict]] = {}
-        self.channel_manager = ChannelManager()
-
-        self.closed: Set[str] = set()
+        self.client = Client(config, self)
         self.active_chat: str | None = None
-
-        self.config_obj = None
-        self.comm = None
-        self.consumer = Consumer(self)
-        self.commands = ChatCommands(self)
-    
-    def set_comm(self, comm:Communication):
-        self.comm = comm
-        self.consumer.comm = comm
+        self.list_ids: list[str] = []
 
     def compose(self) -> ComposeResult:
         yield Header()
-
         with Horizontal(id="main"):
-            self.list_view = ListView(id="chat_list")
-            yield self.list_view
-
+            yield ListView(id="chat_list")
             with Vertical(id="chat_container"):
-                self.chat_view = VerticalScroll(id="chat_view")
-                yield self.chat_view
-
-                yield Input(placeholder="Type message...", id="chat_input")
-
+                yield VerticalScroll(id="chat_view")
+                yield Input(placeholder="Type message or /help ...", id="chat_input")
         yield Footer()
 
-    def on_mount(self) -> None:
-        self.rebuild_list()
+    @property
+    def list_view(self) -> ListView:
+        return self.query_one("#chat_list", ListView)
 
-        if self.chats:
-            first = next(iter(self.chats))
-            self.open_chat(first)
+    @property
+    def chat_view(self) -> VerticalScroll:
+        return self.query_one("#chat_view", VerticalScroll)
 
+    def current_chat(self) -> Chat | None:
+        return self.client.store.get(self.active_chat) if self.active_chat else None
+
+    async def on_mount(self) -> None:
+        self.sub_title = "connecting..."
+        await self.chat_view.mount(Static("No chats - press ctrl+o for the channel list or type /help", classes="placeholder"))
+        self.query_one("#chat_input", Input).focus()
         self.run_worker(self.start_backend(), exclusive=True)
 
-    async def start_backend(self) -> None:
-        await self.comm.connect()
-        await self.comm.start_sender()
-        await self.comm.identify()
-        await self.comm.start_receiver()
+    async def on_unmount(self) -> None:
+        await self.client.stop()
 
-        self.run_worker(self.consumer.receive(), exclusive=False)
-        self.run_worker(self.periodic_worker(), exclusive=False)
+    async def start_backend(self) -> None:
+        if not await self.client.start():
+            self.sub_title = "offline"
+            self.notify("Could not connect to the chat server", severity="error")
+            return
+
+        self.sub_title = f"online as {self.client.character}"
+        self.run_worker(self.client.consumer.receive(), group="receiver")
+        self.run_worker(self.periodic_worker(), group="periodic")
+
+        defaults = self.client.config.get("default_channels") or []
+        for index, channel in enumerate(defaults):
+            await self.client.join(channel, open_chat=index == 0)
 
     async def periodic_worker(self) -> None:
-        interval = 300  # 5 minutes
         while True:
-            try:
-                # logging("debug.log", f"requesting channels\n")
-                await self.comm.message(opcode.LIST_OFFICAL_CHANNELS)
-                await self.comm.message(opcode.LIST_PRIVATE_CHANNELS)
+            await self.client.request_channel_lists()
+            await asyncio.sleep(LIST_REFRESH_SECONDS)
 
-            except Exception as e:
-                print(f"periodic worker error: {e}")
+    async def connection_lost(self) -> None:
+        self.sub_title = "disconnected"
+        self.notify("Connection to the chat server lost", severity="error", timeout=15)
+        await self.client.stop()
 
-            await asyncio.sleep(interval)
+    def channel_lists_updated(self) -> None:
+        if isinstance(self.screen, ChannelsList):
+            self.screen.run_worker(self.screen.render_lists(), exclusive=True)
 
-    def rebuild_list(self) -> None:
-        self.list_view.clear()
+    async def rebuild_list(self) -> None:
+        chats = self.client.store.chats
+        self.list_ids = list(chats.keys())
+        items = []
+        for chat_id in self.list_ids:
+            chat = chats[chat_id]
+            prefix = "#" if chat.kind == CHANNEL else "@"
+            marker = "* " if chat.unread else "  "
+            items.append(ListItem(Label(f"{marker}{prefix}{html.unescape(chat.title)}", markup=False)))
 
-        for chat in self.chats.keys():
-            if chat in self.closed:
-                continue
+        await self.list_view.clear()
+        if items:
+            await self.list_view.extend(items)
+        if self.active_chat in self.list_ids:
+            self.list_view.index = self.list_ids.index(self.active_chat)
 
-            self.list_view.append(ListItem(Static(chat)))
-
-    def open_chat(self, chat: str, chat_type:str="user") -> None:
-        self.active_chat = chat
-
-        self.chat_view.remove_children()
-
-        if chat_type == "user":
-            base_path = Path("chats") / str(self.config_obj.get("character")) / str(chat)
-            log_file = base_path / "chat.log"
-        else:
-            # channel
-            base_path = Path("chats") / str(self.config_obj.get("character")) / str("channels") / str(chat)
-            log_file = base_path / "chat.log"
-
-        if log_file.exists():
-            with open(log_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    self.chat_view.mount(Static(line.rstrip()))
-        else:
-            self.chat_view.mount(Static("No messages yet"))
-
-        self.chat_view.scroll_end()
-
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        visible = [c for c in self.chats.keys() if c not in self.closed]
-
-        if 0 <= event.index < len(visible):
-            self.open_chat(visible[event.index])
-    
-    def action_open_channels_list(self) -> None:
-        self.push_screen(ChannelsList(self))
-
-    def action_close_chat(self) -> None:
-        if not self.active_chat:
+    async def open_chat(self, chat_id:str) -> None:
+        chat = self.client.store.get(chat_id)
+        if chat is None:
             return
+        self.active_chat = chat_id
+        chat.unread = False
 
-        self.closed.add(self.active_chat)
-        self.rebuild_list()
+        await self.chat_view.remove_children()
+        lines = self.client.store.history(chat)
+        widgets = [Static(render_line(line)) for line in lines] or [Static("No messages yet", classes="placeholder")]
+        await self.chat_view.mount_all(widgets)
+        self.chat_view.scroll_end(animate=False)
+        await self.rebuild_list()
 
-        visible = [c for c in self.chats.keys() if c not in self.closed]
+    async def show_line(self, chat_id:str, line:str) -> None:
+        if chat_id == self.active_chat:
+            await self.chat_view.query(".placeholder").remove()
+            await self.chat_view.mount(Static(render_line(line)))
+            self.chat_view.scroll_end(animate=False)
+            return
+        chat = self.client.store.get(chat_id)
+        if chat is not None:
+            chat.unread = True
+        await self.rebuild_list()
 
-        if visible:
-            self.open_chat(visible[0])
-        else:
-            self.chat_view.remove_children()
-            self.chat_view.mount(Static("No chats"))
+    async def chat_removed(self, chat_id:str) -> None:
+        if chat_id != self.active_chat:
+            await self.rebuild_list()
+            return
+        self.active_chat = None
+        ids = self.client.store.ids()
+        if ids:
+            await self.open_chat(ids[0])
+            return
+        await self.chat_view.remove_children()
+        await self.chat_view.mount(Static("No chats", classes="placeholder"))
+        await self.rebuild_list()
 
-    async def handle_chat_input(self, text: str) -> None:
-        await asyncio.sleep(0)
+    async def on_list_view_selected(self, event:ListView.Selected) -> None:
+        if event.list_view.id != "chat_list":
+            return
+        index = event.list_view.index
+        if index is not None and 0 <= index < len(self.list_ids):
+            await self.open_chat(self.list_ids[index])
+            self.query_one("#chat_input", Input).focus()
 
-        # logging("debug.log", f"handle input main: {text}\n")
+    def action_open_channels_list(self) -> None:
+        if not isinstance(self.screen, ChannelsList):
+            self.push_screen(ChannelsList(self.client))
+
+    async def action_close_chat(self) -> None:
+        chat = self.current_chat()
+        if chat is None:
+            return
+        if chat.kind == CHANNEL:
+            await self.client.leave(chat.key)
+        self.client.store.remove(chat.id)
+        await self.chat_removed(chat.id)
+
+    async def on_input_submitted(self, event:Input.Submitted) -> None:
+        if event.input.id != "chat_input":
+            return
+        text = event.value.strip()
+        event.input.value = ""
+        if not text:
+            return
 
         if text.startswith("/"):
-            await self.commands.handle(text)
+            await self.client.commands.handle(text)
             return
 
-        if not self.active_chat:
+        chat = self.current_chat()
+        if chat is None:
+            self.notify("No chat open", severity="warning")
             return
-
-        message = text
-        target = self.active_chat
-        me = self.config_obj.get("character")
-
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        base_path = Path("chats") / str(self.config_obj.get("character")) / str(target)
-        base_path.mkdir(parents=True, exist_ok=True)
-        log_file = base_path / "chat.log"
-
-        is_channel = target.startswith("#")
-
-        if is_channel:
-            opcode_used = opcode.CHANNEL_MESSAGE
-
-            data = {
-                "channel": target,
-                "message": message
-            }
-        else:
-            opcode_used = opcode.PRIVATE_MESSAGE
-
-            data = {
-                "character": me,
-                "recipient": target,
-                "message": message
-            }
-        
-        formatted_message = f"[{timestamp}] {me}: {message}"
-        formatted_message_bold = f"[{timestamp}] [b]{me}[/b]: {message}"
-
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"{formatted_message}\n")
-
-        # UI update (unchanged behavior)
-        self.chats[target].append(message)
-
-        self.chat_view.mount(Static(f"{formatted_message_bold}", markup=True))
-        self.chat_view.scroll_end()
-
-        # send
-        await self.comm.message(opcode_used, data)
-
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
-        text = event.value.strip()
-
-        if text and event.input.id == "chat_input":
-            await self.handle_chat_input(text)
-
-        event.input.value = ""   
+        await self.client.send(chat, text)
 
 
 def main() -> None:
-    app = ChatApp()
-
     config = Config("config.json")
-    comm = Communication(config)
-
-    app.config_obj = config
-    app.set_comm(comm)
-
-    app.run()
+    ChatApp(config).run()
 
 
 if __name__ == "__main__":

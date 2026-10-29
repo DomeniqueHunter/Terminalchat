@@ -1,7 +1,7 @@
 
 APP_BINDINGS = [
-        ("ctrl+x", "close_chat", "Close chat"),
-        ("ctrl+c", "open_channels_list", "Channels List")
+        ("ctrl+o", "open_channels_list", "Channels"),
+        ("ctrl+l", "close_chat", "Close chat"),
     ]
 
 

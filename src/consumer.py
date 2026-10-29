@@ -1,117 +1,123 @@
+import json
+from typing import Any, Awaitable, Callable
 
 from fchat import Opcode as opcode
-from reaction import Reaction, EXCEPTION_REACTION_HANDLER
+from fchat.communication import COMM_ERROR
 
-from typing import Dict, List, Set
-
-import asyncio
-import json
-
-from datetime import datetime
-from pathlib import Path
-
-from textual.widgets import Header, Footer, Input, Static, ListView, ListItem
 from chat_log import logging
+from chat_store import CHANNEL
+
+
+Handler = Callable[[dict], Awaitable[None]]
 
 
 class Consumer:
 
-    def __init__(self, chat_client):
-        self.chat_client = chat_client
-        self.comm = None
+    def __init__(self, client:Any) -> None:
+        self.client = client
+        self.handlers: dict[str, Handler] = {
+            opcode.PING: self.on_ping,
+            opcode.PRIVATE_MESSAGE: self.on_private_message,
+            opcode.CHANNEL_MESSAGE: self.on_channel_message,
+            opcode.ROLEPLAY_AD: self.on_ad,
+            opcode.ROLL: self.on_roll,
+            opcode.LIST_OFFICAL_CHANNELS: self.on_official_channels,
+            opcode.LIST_PRIVATE_CHANNELS: self.on_private_channels,
+            opcode.JOIN_CHANNEL: self.on_join,
+            opcode.LEAVE_CHANNEL: self.on_leave,
+            opcode.LIST_CHARACTERS: self.on_character_list,
+            opcode.USER_CONNECTED: self.on_user_connected,
+            opcode.GONE_OFFLINE: self.on_user_offline,
+            opcode.ERROR: self.on_error,
+            opcode.SYSTEM_MESSAGE: self.on_system,
+        }
 
-        self.opcode_handler = Reaction()
-        self.opcode_handler.add_action(opcode.PING, self.ping_handler)
-        self.opcode_handler.add_action(opcode.PRIVATE_MESSAGE, self.private_message_handler)
-        self.opcode_handler.add_action(opcode.CHANNEL_MESSAGE, self.public_message_handler)
-        self.opcode_handler.add_action(opcode.LIST_OFFICAL_CHANNELS, self.list_official_channels_handler)
-        self.opcode_handler.add_action(opcode.LIST_PRIVATE_CHANNELS, self.list_private_channels_handler)
-        self.opcode_handler.add_action(EXCEPTION_REACTION_HANDLER, self.__defaultException)
-    
+    @property
+    def comm(self) -> Any:
+        return self.client.comm
+
+    @property
+    def app(self) -> Any:
+        return self.client.app
+
     async def receive(self) -> None:
         while True:
-            op, json_message = await self.comm.receive()
+            op, raw = await self.comm.receive()
 
-            data = json.loads(json_message)
-            # logging("debug.log", f"{op}: {json_message}\n")
-            
-            if op:
-                await self.opcode_handler.react(op, data)
-    
-    async def ping_handler(self, data:dict):   
-        await self.comm.priority_message(opcode=opcode.PING)
+            if op == COMM_ERROR:
+                await self.app.connection_lost()
+                return
 
-    async def private_message_handler(self, data:dict):
-        user = data.get("character")
-        message = (data.get("message") or "").strip()
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            handler = self.handlers.get(op)
+            if handler is None:
+                continue
 
-        if user not in self.chat_client.chats:
-            self.chat_client.chats[user] = []
+            try:
+                data = json.loads(raw) if raw else {}
+                await handler(data)
+            except Exception as error:
+                logging("debug.log", f"{op} handler failed: {error!r} raw={raw}\n")
 
-        if user in self.chat_client.closed:
-            self.chat_client.closed.remove(user)
+    async def on_ping(self, data:dict) -> None:
+        await self.comm.priority_message(opcode.PING)
 
-        formatted_message = f"[{timestamp}] {user}: {message}"
-        formatted_message_bold = f"[{timestamp}] [b]{user}[/b]: {message}"
+    async def on_private_message(self, data:dict) -> None:
+        await self.client.on_private_message(data["character"], data.get("message", ""))
 
-        self.chat_client.chats[user].append({
-            "type": "PRI",
-            "text": formatted_message
-        })
+    async def on_channel_message(self, data:dict) -> None:
+        await self.client.on_channel_message(data["channel"], data["character"], data.get("message", ""))
 
-        base_path = Path("chats") / str(self.chat_client.config_obj.get("character")) / str(user)
-        base_path.mkdir(parents=True, exist_ok=True)
+    async def on_ad(self, data:dict) -> None:
+        await self.client.on_channel_message(data["channel"], f"[AD] {data['character']}", data.get("message", ""))
 
-        log_file = base_path / "chat.log"
+    async def on_roll(self, data:dict) -> None:
+        message = data.get("message", "")
+        if "channel" in data:
+            await self.client.on_channel_message(data["channel"], "System", message)
+        elif not self.client.is_me(data.get("character")):
+            await self.client.on_private_message(data["character"], message)
 
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"{formatted_message}\n")
+    async def on_official_channels(self, data:dict) -> None:
+        self.client.channel_manager.add_official_channels(data)
+        self.app.channel_lists_updated()
 
-        if user == self.chat_client.active_chat:
-            self.chat_client.chat_view.mount(Static(formatted_message_bold, markup=True))
-            self.chat_client.chat_view.scroll_end()
+    async def on_private_channels(self, data:dict) -> None:
+        self.client.channel_manager.add_open_private_channels(data)
+        self.app.channel_lists_updated()
 
-        self.chat_client.rebuild_list()
+    async def on_join(self, data:dict) -> None:
+        if not self.client.is_me(data["character"]["identity"]):
+            return
+        code = data["channel"]
+        await self.client.on_joined(code, data.get("title") or code)
 
-    async def public_message_handler(self, data:dict):
-        channel_id = data.get("channel")
-        message = (data.get("message") or "").strip()
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    async def on_leave(self, data:dict) -> None:
+        if self.client.is_me(data.get("character")):
+            await self.client.on_left(data["channel"])
 
-        if channel_id not in self.chat_client.chats:
-            self.chat_client.chats[channel_id] = []
+    async def on_character_list(self, data:dict) -> None:
+        for entry in data.get("characters", []):
+            self.client.set_online(entry[0])
 
-        if channel_id in self.chat_client.closed:
-            self.chat_client.closed.remove(channel_id)
+    async def on_user_connected(self, data:dict) -> None:
+        self.client.set_online(data["identity"])
 
-        formatted_message = f"[{timestamp}] {message}"
+    async def on_user_offline(self, data:dict) -> None:
+        self.client.set_offline(data["character"])
 
-        self.chat_client.chats[channel_id].append({
-            "type": "MSG",
-            "text": formatted_message
-        })
+    async def on_error(self, data:dict) -> None:
+        self.app.notify(f"Error {data.get('number')}: {data.get('message')}", severity="error")
 
-        base_path = Path("chats") / str(self.chat_client.config_obj.get("character")) / "channels" / str(channel_id)
-        base_path.mkdir(parents=True, exist_ok=True)
-        log_file = base_path / "chat.log"
+    async def on_system(self, data:dict) -> None:
+        if "channel" in data and self.client.store.find(CHANNEL, data["channel"]):
+            await self.client.on_channel_message(data["channel"], "System", data.get("message", ""))
+        else:
+            self.app.notify(data.get("message", ""), title="System")
 
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"{formatted_message}\n")
 
-        if channel_id == self.chat_client.active_chat:
-            self.chat_client.chat_view.mount(Static(formatted_message))
-            self.chat_client.chat_view.scroll_end()
+def main() -> None:
+    pass
 
-        self.chat_client.rebuild_list()
 
-    async def list_private_channels_handler(self, data:dict):
-        self.chat_client.channel_manager.add_open_private_channels(data)
-
-    async def list_official_channels_handler(self, data:dict):
-        self.chat_client.channel_manager.add_official_channels(data)
-    
-    async def __defaultException(self, data:dict):
-        pass
-
-    
+if __name__ == "__main__":
+    main()
