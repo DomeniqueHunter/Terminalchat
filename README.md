@@ -125,7 +125,7 @@ Type commands into the input line.
 | `/pins` | Show all pinned chats |
 | `/status [status] [message]` | Set your status (`online`, `looking`, `busy`, `dnd`, `idle`, `away`) and an optional message (max. 255 characters). If the first word is not a status, the whole text becomes the message and the status is kept (`/status back in 5`); without arguments the current status is shown. The status is stored per character and restored after every login; `/status online` resets it |
 | `/status:flag <status>` | Change only the status, keep the message |
-| `/status:message [text]` | Change only the message, keep the status; without text the message is cleared |
+| `/status:message [text]` | Change only the message, keep the status. Without text an editor opens with the current message and a preview (`enter` saves, `ctrl+enter` / `shift+enter` / `ctrl+j` adds a new line, `esc` cancels, saving an empty text clears the message) |
 | `/ads [on\|off]` | Show or hide ads (role play ads) in the current channel; hidden ads are still logged and reappear with `/ads on`. Stored per channel and character |
 | `/gif [on\|off]` | Turn eicon animation on or off; without argument it toggles |
 | `/char [name]` | Switch character; without a name a character picker opens |
@@ -256,6 +256,26 @@ Paths below `<data>` refer to the data directory (default `~/.local/share/termin
 | `tmux.conf` | Settings for the launcher's tmux server |
 
 Older single-file logs (`chat.log`, `console.log`) are split into daily files automatically the first time a chat is opened; the original is kept as `chat.log.bak` / `console.log.bak` and can be deleted afterwards.
+
+## Removing all data
+
+`purge.sh` deletes everything terminalchat stored outside the program folder: the configuration (including the stored password), chat logs and other data, and the eicon cache. It respects `TERMINALCHAT_CONFIG`, `TERMINALCHAT_DATA`, `data_dir` and the XDG variables, and also removes leftovers from older versions in `src/`. If the client is still running in the background, it offers to stop it first.
+
+```bash
+./purge.sh -n      # only show what would be deleted
+./purge.sh         # delete after confirmation
+```
+
+| Option | Description |
+|---|---|
+| `--keep-config` | Keep the configuration |
+| `--keep-data` | Keep chat logs and data |
+| `--keep-cache` | Keep the eicon cache |
+| `--venv` | Also delete `venv/` (recreate it with `./setup.sh`) |
+| `-n`, `--dry-run` | Only show what would be deleted |
+| `-y`, `--yes` | Do not ask for confirmation |
+
+With a custom data directory (`data_dir` or `TERMINALCHAT_DATA`) only `chats/` and `debug.log` are deleted; the directory itself is removed only if it is empty afterwards. To uninstall completely, run `./purge.sh` and then delete the program folder.
 
 ## Security note
 

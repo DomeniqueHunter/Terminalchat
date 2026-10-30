@@ -7,6 +7,7 @@ from typing import Any, Awaitable, Callable
 from chat_store import CHANNEL, CONSOLE
 from fchat import Opcode as opcode
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
+from panels.edit_panel import EditScreen
 from panels.info_panel import InfoScreen
 
 
@@ -39,7 +40,7 @@ COMMAND_INFO = [
     ("bottle", "", "spin the bottle (channels only)"),
     ("status", "[status] [text]", "set status and/or status message"),
     ("status:flag", "<status>", "change only the status"),
-    ("status:message", "[text]", "change only the message (empty clears it)"),
+    ("status:message", "[text]", "change only the message; without text opens an editor"),
     ("channels", "", "open the channel list"),
     ("users", "", "show/hide friends and channel users"),
     ("pin", "", "pin the current chat, restored on start"),
@@ -445,7 +446,15 @@ class ChatCommands:
         await self.apply_status(status, own.message)
 
     async def cmd_status_message(self, args:str) -> None:
-        await self.apply_status(self.client.own_status.status, args.strip())
+        if args.strip():
+            await self.apply_status(self.client.own_status.status, args.strip())
+            return
+        screen = EditScreen("Status message", self.client.own_status.message, MAX_MESSAGE_LENGTH)
+        self.app.push_screen(screen, self.on_status_message_edited)
+
+    def on_status_message_edited(self, message:str | None) -> None:
+        if message is not None and message != self.client.own_status.message:
+            self.app.run_worker(self.apply_status(self.client.own_status.status, message))
 
     async def apply_status(self, status:str, message:str) -> None:
         if len(message) > MAX_MESSAGE_LENGTH:
