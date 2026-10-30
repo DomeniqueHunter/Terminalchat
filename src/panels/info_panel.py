@@ -16,6 +16,7 @@ class InfoScreen(ModalScreen[None]):
         width: auto;
         max-width: 90%;
         height: auto;
+        min-width: 30;
         max-height: 90%;
         background: $panel;
         border: round $accent;
@@ -31,14 +32,20 @@ class InfoScreen(ModalScreen[None]):
     InfoScreen Static {
         width: auto;
     }
+    InfoScreen.-wide > Vertical {
+        width: 80%;
+    }
+    InfoScreen.-wide VerticalScroll, InfoScreen.-wide Static {
+        width: 100%;
+    }
     """
 
     BINDINGS = [
         Binding("escape,q,enter", "close", "Close", show=False),
     ]
 
-    def __init__(self, title:str, text:str) -> None:
-        super().__init__()
+    def __init__(self, title:str, text:str | Text, wide:bool=False) -> None:
+        super().__init__(classes="-wide" if wide else "")
         self.info_title = title
         self.text = text
 
@@ -47,7 +54,7 @@ class InfoScreen(ModalScreen[None]):
             box.border_title = self.info_title
             box.border_subtitle = "esc to close"
             with VerticalScroll():
-                yield Static(Text(self.text))
+                yield Static(self.text if isinstance(self.text, Text) else Text(self.text))
 
     def on_mount(self) -> None:
         self.query_one(VerticalScroll).focus()

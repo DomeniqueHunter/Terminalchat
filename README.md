@@ -131,6 +131,7 @@ Type commands into the input line.
 | `/char [name]` | Switch character; without a name a character picker opens |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
+| `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
 | `/help` | Show the command list (closes with `esc`) |
 | `/shortcuts` | Show all key bindings (alias: `/keys`, closes with `esc`) |
 | `/quit` | Exit |

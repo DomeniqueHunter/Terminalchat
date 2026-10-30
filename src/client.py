@@ -43,6 +43,7 @@ class Client:
         self.pending_create: set[str] = set()
         self.variables: dict[str, object] = {"lfrp_flood": 600, "lfrp_max": 50000, "chat_max": 4096, "priv_max": 50000}
         self.last_ad: dict[str, float] = {}
+        self.descriptions: dict[str, str] = {}
         self.joining: set[str] = set()
         self.presence = Presence(app.presence_changed)
 
@@ -123,8 +124,8 @@ class Client:
         self.presence.drop_channel(code)
         await self.comm.message(opcode.LEAVE_CHANNEL, {"channel": code})
 
-    def set_online(self, name:str, status:str="online") -> None:
-        self.presence.set_online(name, status)
+    def set_online(self, name:str, status:str="online", message:str="") -> None:
+        self.presence.set_online(name, status, message)
 
     def set_offline(self, name:str) -> None:
         self.presence.set_offline(name)

@@ -4,7 +4,12 @@ import os
 import re
 from typing import Any, Awaitable, Callable
 
+from rich.style import Style
+from rich.text import Text
+
+from bbcode import to_text
 from chat_store import CHANNEL, CONSOLE
+from color_config import STATUS_STYLES, make_style
 from fchat import Opcode as opcode
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
 from panels.edit_panel import EditScreen
@@ -51,6 +56,7 @@ COMMAND_INFO = [
     ("char", "[name]", "switch character"),
     ("logout", "", "log out and forget password"),
     ("minimize", "", "detach, keep running in background"),
+    ("chatstatus", "", "show the partner's status or the channel description"),
     ("help", "", "show all commands"),
     ("shortcuts", "", "show all key bindings"),
     ("quit", "", "exit"),
@@ -145,6 +151,7 @@ class ChatCommands:
             "logout": self.cmd_logout,
             "minimize": self.cmd_minimize,
             "detach": self.cmd_minimize,
+            "chatstatus": self.cmd_chatstatus,
             "help": self.cmd_help,
             "shortcuts": self.cmd_shortcuts,
             "keys": self.cmd_shortcuts,
@@ -468,6 +475,35 @@ class ChatCommands:
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()
+
+    async def cmd_chatstatus(self, args:str) -> None:
+        chat = self.app.current_chat()
+        if chat is None or chat.kind == CONSOLE:
+            self.app.notify("Open a private chat or a channel first", severity="warning")
+            return
+        title = html.unescape(chat.title)
+        text = Text()
+        if chat.kind == CHANNEL:
+            members = self.client.presence.channel_members(chat.key)
+            text.append(title, "bold")
+            text.append(f"\n{chat.key}", "dim")
+            if members is not None:
+                text.append(f"  ·  {len(members)} users", "dim")
+            description = self.client.descriptions.get(chat.key, "")
+            text.append("\n\n")
+            text.append_text(to_text(description, False) if description.strip() else Text("(no description)", "dim"))
+            self.app.push_screen(InfoScreen("Channel description", text, wide=True))
+            return
+        text.append(title, self.app.name_style(chat.key) + Style(bold=True))
+        state = self.client.presence.status_of(chat.key)
+        if state is None:
+            text.append("\noffline", "dim")
+        else:
+            status, message = state
+            text.append(f"\n{status}", make_style(STATUS_STYLES.get(status, "")))
+            text.append("\n\n")
+            text.append_text(to_text(message, False) if message.strip() else Text("(no status message)", "dim"))
+        self.app.push_screen(InfoScreen("Status", text, wide=len(text.plain) > 60))
 
     async def cmd_help(self, args:str) -> None:
         self.app.push_screen(InfoScreen("Commands", HELP_TEXT))

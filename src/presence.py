@@ -10,6 +10,7 @@ class Presence:
         self.on_change = on_change
         self.online: dict[str, str] = {}
         self.status: dict[str, str] = {}
+        self.messages: dict[str, str] = {}
         self.friends: set[str] = set()
         self.members: dict[str, dict[str, str]] = {}
         self.ops: dict[str, set[str]] = {}
@@ -21,25 +22,34 @@ class Presence:
             if key in members:
                 self.on_change(code)
 
-    def set_online(self, name:str, status:str="online") -> None:
+    def set_online(self, name:str, status:str="online", message:str="") -> None:
         key = name.lower()
         self.online[key] = name
         self.status[key] = status or "online"
+        self.messages[key] = message
         self._changed_for(key)
 
     def set_offline(self, name:str) -> None:
         key = name.lower()
         self.online.pop(key, None)
         self.status.pop(key, None)
+        self.messages.pop(key, None)
         self._changed_for(key)
         for members in self.members.values():
             members.pop(key, None)
 
-    def set_status(self, name:str, status:str) -> None:
+    def set_status(self, name:str, status:str, message:str="") -> None:
         key = name.lower()
         if key in self.online:
             self.status[key] = status or "online"
+            self.messages[key] = message
             self._changed_for(key)
+
+    def status_of(self, name:str) -> tuple[str, str] | None:
+        key = name.lower()
+        if key not in self.online:
+            return None
+        return self.status.get(key, "online"), self.messages.get(key, "")
 
     def find_online(self, name:str) -> str | None:
         return self.online.get(name.strip().lower())

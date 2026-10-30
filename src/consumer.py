@@ -28,6 +28,7 @@ class Consumer:
             opcode.LIST_CHARACTERS: self.on_character_list,
             opcode.FRIENDS_LIST: self.on_friends,
             opcode.STATUS: self.on_status,
+            opcode.CHANNEL_DESCRIPTION: self.on_description,
             opcode.INITIAL_CHANNEL_DATA: self.on_channel_users,
             opcode.LIST_OPS: self.on_ops,
             opcode.PROMOTE_OP: self.on_op_added,
@@ -121,7 +122,7 @@ class Consumer:
 
     async def on_character_list(self, data:dict) -> None:
         for entry in data.get("characters", []):
-            self.client.set_online(entry[0], entry[2] if len(entry) > 2 else "online")
+            self.client.set_online(entry[0], entry[2] if len(entry) > 2 else "online", entry[3] if len(entry) > 3 else "")
             self.client.genders.set(entry[0], entry[1] if len(entry) > 1 else None)
 
     def is_friend(self, name:str) -> bool:
@@ -138,7 +139,10 @@ class Consumer:
         self.client.presence.set_friends(data.get("characters", []))
 
     async def on_status(self, data:dict) -> None:
-        self.client.presence.set_status(data["character"], data.get("status", "online"))
+        self.client.presence.set_status(data["character"], data.get("status", "online"), data.get("statusmsg", ""))
+
+    async def on_description(self, data:dict) -> None:
+        self.client.descriptions[data["channel"]] = data.get("description", "")
 
     async def on_channel_users(self, data:dict) -> None:
         names = [user["identity"] for user in data.get("users", [])]
