@@ -132,6 +132,7 @@ Type commands into the input line.
 | `/logout` | Disconnect, forget the stored password and show the login screen |
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/help` | Show the command list |
+| `/shortcuts` | Show all key bindings (alias: `/keys`) |
 | `/quit` | Exit |
 
 ### Chat and ads input

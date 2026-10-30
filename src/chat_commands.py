@@ -50,6 +50,7 @@ COMMAND_INFO = [
     ("logout", "", "log out and forget password"),
     ("minimize", "", "detach, keep running in background"),
     ("help", "", "show all commands"),
+    ("shortcuts", "", "show all key bindings"),
     ("quit", "", "exit"),
 ]
 
@@ -66,6 +67,28 @@ def matching_commands(prefix:str) -> list[tuple[str, str, str]]:
 
 
 HELP_TEXT = "\n".join(f"{command_usage(name, args):<26} {description}" for name, args, description in COMMAND_INFO)
+
+SHORTCUT_INFO = [
+    ("enter", "send the message (Ads mode: post the ad)"),
+    ("shift+enter", "new line (if the terminal supports it)"),
+    ("ctrl+enter", "new line (if the terminal supports it)"),
+    ("ctrl+j / alt+enter", "new line (works everywhere)"),
+    ("up / down", "move between lines, then browse sent input"),
+    ("tab", "complete a command or character name"),
+    ("ctrl+tab", "previous name match"),
+    ("ctrl+r", "switch input between Chat and Ads"),
+    ("ctrl+o", "open the channel list"),
+    ("ctrl+l", "leave / close the current chat"),
+    ("ctrl+f", "show/hide friends and channel users"),
+    ("ctrl+t", "minimize (detach, keep running)"),
+    ("ctrl+p", "command palette"),
+    ("ctrl+q", "quit"),
+    ("escape", "close a dialog"),
+    ("click title bar", "show/hide your status message"),
+    ("click link", "open it in the browser"),
+]
+
+SHORTCUTS_TEXT = "\n".join(f"{key:<20} {description}" for key, description in SHORTCUT_INFO)
 
 
 def unquote(text:str) -> str:
@@ -119,6 +142,8 @@ class ChatCommands:
             "minimize": self.cmd_minimize,
             "detach": self.cmd_minimize,
             "help": self.cmd_help,
+            "shortcuts": self.cmd_shortcuts,
+            "keys": self.cmd_shortcuts,
             "quit": self.cmd_quit,
         }
 
@@ -434,6 +459,9 @@ class ChatCommands:
 
     async def cmd_help(self, args:str) -> None:
         self.app.notify(HELP_TEXT, title="Commands", timeout=10)
+
+    async def cmd_shortcuts(self, args:str) -> None:
+        self.app.notify(SHORTCUTS_TEXT, title="Shortcuts", timeout=15)
 
     async def cmd_quit(self, args:str) -> None:
         self.app.exit()
