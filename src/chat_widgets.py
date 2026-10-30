@@ -130,6 +130,7 @@ class ChatInput(TextArea):
         self.sent_history: list[str] = []
         self.history_position: int | None = None
         self.draft = ""
+        self.history_enabled = True
 
     @property
     def value(self) -> str:
@@ -164,7 +165,7 @@ class ChatInput(TextArea):
         if self.cursor_location[0] > 0:
             self.action_cursor_up()
             return
-        if not self.sent_history:
+        if not self.sent_history or not self.history_enabled:
             return
         if self.history_position is None:
             self.draft = self.text
@@ -177,7 +178,7 @@ class ChatInput(TextArea):
         if self.cursor_location[0] < self.document.line_count - 1:
             self.action_cursor_down()
             return
-        if self.history_position is None:
+        if self.history_position is None or not self.history_enabled:
             return
         self.history_position += 1
         if self.history_position >= len(self.sent_history):
@@ -196,6 +197,51 @@ class ChatInput(TextArea):
         completion = names[0] + " " if len(names) == 1 else os.path.commonprefix(names)
         if len(completion) >= len(self.text) - 1:
             self.set_text("/" + completion)
+
+
+class InputModeBar(Horizontal):
+
+    DEFAULT_CSS = """
+    InputModeBar {
+        height: 1;
+    }
+    InputModeBar #input_info {
+        width: 1fr;
+        text-align: right;
+        color: $text-muted;
+    }
+    InputModeBar .mode {
+        width: auto;
+        margin-left: 1;
+        padding: 0 1;
+    }
+    InputModeBar .mode.-active {
+        text-style: bold reverse;
+    }
+    """
+
+    class ModeSelected(Message):
+
+        def __init__(self, mode:str) -> None:
+            super().__init__()
+            self.mode = mode
+
+    def compose(self) -> ComposeResult:
+        yield Static("", id="input_info")
+        yield Static("Chat", id="mode_chat", classes="mode")
+        yield Static("Ads", id="mode_ads", classes="mode")
+
+    def on_click(self, event:Click) -> None:
+        if event.widget is not None and event.widget.id in ("mode_chat", "mode_ads"):
+            event.stop()
+            self.post_message(self.ModeSelected(event.widget.id[5:]))
+
+    def show(self, info:Text | str, mode:str, ads_possible:bool) -> None:
+        self.query_one("#input_info", Static).update(info)
+        for name in ("chat", "ads"):
+            button = self.query_one(f"#mode_{name}", Static)
+            button.display = ads_possible
+            button.set_class(name == mode, "-active")
 
 
 class StatusHeader(Header):

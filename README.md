@@ -107,6 +107,12 @@ Type commands into the input line.
 | `/help` | Show the command list |
 | `/quit` | Exit |
 
+### Chat and ads input
+
+Above the input field a bar shows the length of your text and the server limit (`12 / 4096`); it turns red when the text is too long. In channels it also shows two buttons, *Chat* and *Ads*. Click them or press `ctrl+r` to switch.
+
+In *Ads* mode the input holds a separate ad text for each channel. `enter` posts it as role play ad and the text stays, so you can post it again later or edit it. The bar shows how long you have to wait until the next ad is allowed. Ad texts are saved and survive restarts. Your chat text is kept while you are in *Ads* mode and comes back when you switch to *Chat*. Commands starting with `/` still work in *Ads* mode. Opening a private chat or the console switches back to *Chat*.
+
 While typing a `/`, a list of matching commands with a short description appears above the input line. Press `tab` to complete the command as far as it is unambiguous.
 
 Names and channel titles containing spaces work without quotes (`/priv Domenique Hunter`); quotes are accepted as well.
@@ -140,6 +146,7 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+l` | Leave / close the current chat |
 | `ctrl+f` | Show or hide the sidebar (friends / channel users) |
 | `ctrl+t` | Minimize: detach and keep running in the background (needs the launcher) |
+| `ctrl+r` | Switch the input between *Chat* and *Ads* (channels only) |
 | `enter` | Send the message |
 | `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
 | `up` / `down` | Move between lines; on the first / last line browse previously sent input |
@@ -210,6 +217,7 @@ Paths below `<data>` refer to the data directory (default `~/.local/share/termin
 | `<data>/chats/<character>/pins.json` | Pinned chats |
 | `<data>/chats/<character>/status.json` | Your status and status message |
 | `<data>/chats/<character>/ads.json` | Per-channel ad visibility |
+| `<data>/chats/<character>/ad_drafts.json` | Ad texts per channel (*Ads* input mode) |
 | `<data>/chats/genders.json` | Known genders of other characters, used for name colors |
 | `<data>/debug.log` | Debug output |
 | `~/.cache/terminalchat/eicons/` | Eicon cache |

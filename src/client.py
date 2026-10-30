@@ -7,7 +7,7 @@ from fchat import ChannelManager
 from fchat import Communication
 from fchat import Opcode as opcode
 
-from ad_settings import AdSettings
+from ad_settings import AdDrafts, AdSettings
 from chat_commands import ChatCommands
 from chat_store import AD_PREFIX, CHANNEL, CONSOLE, USER, Chat, ChatStore, make_id
 from config import Config
@@ -35,12 +35,13 @@ class Client:
 
         self.pins = Pins(self.store.base / "pins.json")
         self.ads = AdSettings(self.store.base / "ads.json", bool(config.get("show_ads", True)))
+        self.ad_drafts = AdDrafts(self.store.base / "ad_drafts.json")
         self.genders = GenderStore(self.store.base.parent / "genders.json")
         self.own_status = OwnStatus(self.store.base / "status.json")
 
         self.pending_open: set[str] = set()
         self.pending_create: set[str] = set()
-        self.variables: dict[str, object] = {"lfrp_flood": 600, "lfrp_max": 50000}
+        self.variables: dict[str, object] = {"lfrp_flood": 600, "lfrp_max": 50000, "chat_max": 4096, "priv_max": 50000}
         self.last_ad: dict[str, float] = {}
         self.joining: set[str] = set()
         self.presence = Presence(app.presence_changed)

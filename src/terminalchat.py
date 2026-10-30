@@ -10,12 +10,13 @@ import sys
 from rich.style import Style
 from rich.text import Text
 from textual.app import App, ComposeResult
+from textual.css.query import NoMatches
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Label, ListItem, ListView, OptionList, Static, TextArea
 
 import login
 from chat_store import CHANNEL, CONSOLE, USER, Chat, is_ad_line
-from chat_widgets import ChatInput, ChatLine, CommandHints, StatusHeader
+from chat_widgets import ChatInput, ChatLine, CommandHints, InputModeBar, StatusHeader
 from client import Client
 from color_config import gender_style
 import paths
@@ -33,6 +34,8 @@ from terminal_config import APP_BINDINGS, APP_CSS
 LIST_REFRESH_SECONDS = 300
 SIDEBAR_REFRESH_SECONDS = 1.0
 GENDER_SAVE_SECONDS = 30
+INPUT_BAR_REFRESH_SECONDS = 1.0
+CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+r: ads)"
 
 
 class ChatApp(App):
@@ -56,6 +59,9 @@ class ChatApp(App):
         self.gif_enabled = bool(config.get("eicon_animate", True))
         self.active_chat: str | None = None
         self.list_ids: list[str | None] = []
+        self.input_mode = "chat"
+        self.ad_channel: str | None = None
+        self.chat_draft = ""
 
     def compose(self) -> ComposeResult:
         yield StatusHeader()
@@ -64,7 +70,8 @@ class ChatApp(App):
             with Vertical(id="chat_container"):
                 yield VerticalScroll(id="chat_view")
                 yield CommandHints(id="command_hints")
-                yield ChatInput(placeholder="Type message or /help ...  (ctrl+enter: new line)", id="chat_input")
+                yield InputModeBar(id="input_bar")
+                yield ChatInput(placeholder=CHAT_PLACEHOLDER, id="chat_input")
             yield Sidebar(id="sidebar")
         yield Footer()
 
@@ -84,6 +91,10 @@ class ChatApp(App):
         return self.client.store.get(self.active_chat) if self.active_chat else None
 
     @property
+    def chat_input(self) -> ChatInput:
+        return self.query_one("#chat_input", ChatInput)
+
+    @property
     def sidebar(self) -> Sidebar:
         return self.query_one("#sidebar", Sidebar)
 
@@ -91,6 +102,7 @@ class ChatApp(App):
         self.sidebar.display = bool(self.config.get("show_sidebar", False))
         self.set_interval(SIDEBAR_REFRESH_SECONDS, self.refresh_sidebar)
         self.set_interval(GENDER_SAVE_SECONDS, self.save_genders)
+        self.set_interval(INPUT_BAR_REFRESH_SECONDS, self.refresh_input_bar)
         self.sidebar.name_style = self.name_style
         self.sub_title = "offline"
         await self.reset_view()
@@ -167,6 +179,8 @@ class ChatApp(App):
 
     def save_genders(self) -> None:
         self.client.genders.save()
+        self.store_ad_draft()
+        self.client.ad_drafts.save()
 
     def name_style(self, name:str) -> Style:
         return gender_style(self.client.genders.get(name))
@@ -179,6 +193,8 @@ class ChatApp(App):
         await self.client.stop()
 
     async def reset_view(self) -> None:
+        if self.input_mode == "ads":
+            self.leave_ad_mode()
         self.active_chat = None
         self.sidebar_dirty.add(FRIENDS)
         await self.rebuild_list()
@@ -338,6 +354,13 @@ class ChatApp(App):
         chat = self.client.store.get(chat_id)
         if chat is None:
             return
+        if self.input_mode == "ads" and chat.key != self.ad_channel:
+            if chat.kind == CHANNEL:
+                self.store_ad_draft()
+                self.ad_channel = chat.key
+                self.chat_input.set_text(self.client.ad_drafts.get(chat.key))
+            else:
+                self.leave_ad_mode()
         self.active_chat = chat_id
         chat.unread = False
         self.sidebar_dirty.add("view")
@@ -352,6 +375,7 @@ class ChatApp(App):
         widgets = [self.chat_line(line) for line in lines] or [Static("No messages yet", classes="placeholder")]
         await self.chat_view.mount_all(widgets)
         self.chat_view.scroll_end(animate=False)
+        self.update_input_mode()
         await self.rebuild_list()
 
     async def show_line(self, chat_id:str, line:str) -> None:
@@ -405,8 +429,97 @@ class ChatApp(App):
     def on_text_area_changed(self, event:TextArea.Changed) -> None:
         if event.text_area.id == "chat_input":
             self.query_one(CommandHints).show_for(event.text_area.text)
+            self.store_ad_draft()
+            self.refresh_input_bar()
+
+    def store_ad_draft(self) -> None:
+        if self.input_mode != "ads" or not self.ad_channel:
+            return
+        try:
+            text = self.chat_input.text
+        except NoMatches:
+            return
+        if not text.startswith("/"):
+            self.client.ad_drafts.set(self.ad_channel, text)
+
+    def leave_ad_mode(self) -> None:
+        self.store_ad_draft()
+        self.client.ad_drafts.save()
+        self.input_mode = "chat"
+        self.ad_channel = None
+        self.chat_input.set_text(self.chat_draft)
+        self.update_input_mode()
+
+    def set_input_mode(self, mode:str) -> None:
+        if mode == self.input_mode:
+            return
+        if mode == "chat":
+            self.leave_ad_mode()
+        else:
+            chat = self.current_chat()
+            if chat is None or chat.kind != CHANNEL:
+                self.notify("Ads can only be posted in channels", severity="warning")
+                return
+            self.chat_draft = self.chat_input.text
+            self.input_mode = "ads"
+            self.ad_channel = chat.key
+            self.chat_input.set_text(self.client.ad_drafts.get(chat.key))
+            self.update_input_mode()
+        self.chat_input.focus()
+
+    def action_toggle_ad_mode(self) -> None:
+        self.set_input_mode("chat" if self.input_mode == "ads" else "ads")
+
+    def on_input_mode_bar_mode_selected(self, event:InputModeBar.ModeSelected) -> None:
+        self.set_input_mode(event.mode)
+
+    def update_input_mode(self) -> None:
+        box = self.chat_input
+        box.history_enabled = self.input_mode == "chat"
+        if self.input_mode == "ads":
+            chat = self.current_chat()
+            title = html.unescape(chat.title) if chat else self.ad_channel
+            box.placeholder = f"Ad for {title} - enter posts it, the text stays  (ctrl+r: chat)"
+        else:
+            box.placeholder = CHAT_PLACEHOLDER
+        self.refresh_input_bar()
+
+    def input_limit(self, chat:Chat | None) -> int | None:
+        if chat is None or chat.kind == CONSOLE:
+            return None
+        if self.input_mode == "ads":
+            name = "lfrp_max"
+        else:
+            name = "chat_max" if chat.kind == CHANNEL else "priv_max"
+        return int(self.client.variables.get(name, 50000))
+
+    def refresh_input_bar(self) -> None:
+        try:
+            bar = self.query_one("#input_bar", InputModeBar)
+        except NoMatches:
+            return
+        chat = self.current_chat()
+        limit = self.input_limit(chat)
+        info = Text()
+        if self.input_mode == "ads" and self.ad_channel:
+            wait = self.client.ad_wait_seconds(self.ad_channel)
+            if wait:
+                minutes, seconds = divmod(wait, 60)
+                info.append(f"next ad in {minutes}:{seconds:02d}   ")
+        if limit is not None:
+            length = len(self.chat_input.text)
+            info.append(f"{length} / {limit}", "bold red" if length > limit else "")
+        bar.show(info, self.input_mode, chat is not None and chat.kind == CHANNEL)
 
     async def on_chat_input_submitted(self, event:ChatInput.Submitted) -> None:
+        if self.input_mode == "ads" and not event.value.startswith("/"):
+            if event.value.strip():
+                await self.client.commands.cmd_ad(event.value.strip())
+            self.store_ad_draft()
+            self.client.ad_drafts.save()
+            self.refresh_input_bar()
+            return
+
         text = event.value.strip()
         event.chat_input.set_text("")
         if not text:
@@ -415,6 +528,8 @@ class ChatApp(App):
 
         if text.startswith("/"):
             await self.client.commands.handle(text)
+            if self.input_mode == "ads" and self.ad_channel and not self.chat_input.text:
+                self.chat_input.set_text(self.client.ad_drafts.get(self.ad_channel))
             return
 
         chat = self.current_chat()

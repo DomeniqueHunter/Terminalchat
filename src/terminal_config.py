@@ -4,6 +4,7 @@ APP_BINDINGS = [
         ("ctrl+l", "close_chat", "Close chat"),
         ("ctrl+f", "toggle_sidebar", "Users"),
         ("ctrl+t", "minimize", "Minimize"),
+        ("ctrl+r", "toggle_ad_mode", "Chat/Ads"),
     ]
 
 
