@@ -8,6 +8,7 @@ from rich.text import Text
 
 from bbcode import to_text
 from color_config import SENDER_STYLE, NameStyle, make_style, no_name_style
+from sanitize import clean_text, safe_path_part
 
 
 USER = "user"
@@ -76,8 +77,8 @@ class ChatStore:
         if chat.kind == CONSOLE:
             return self.base / CONSOLE_DIR
         if chat.kind == CHANNEL:
-            return self.base / "channels" / chat.key
-        return self.base / chat.key
+            return self.base / "channels" / safe_path_part(chat.key)
+        return self.base / safe_path_part(chat.key)
 
     def legacy_log(self, chat:Chat) -> Path:
         if chat.kind == CONSOLE:
@@ -113,7 +114,7 @@ class ChatStore:
 
     def append(self, chat:Chat, sender:str, message:str) -> str:
         self.migrate(chat)
-        line = format_line(sender, message)
+        line = format_line(clean_text(sender), clean_text(message))
         directory = self.log_dir(chat)
         directory.mkdir(parents=True, exist_ok=True)
         with open(directory / f"{line[1:11]}.log", "a", encoding="utf-8") as file:
@@ -149,7 +150,7 @@ def read_entries(path:Path) -> list[str]:
     entries: list[str] = []
     with open(path, "r", encoding="utf-8") as file:
         for raw in file:
-            raw = raw.rstrip("\n")
+            raw = clean_text(raw.rstrip("\n")) if not raw.startswith(CONTINUATION) else CONTINUATION + clean_text(raw[len(CONTINUATION):].rstrip("\n"))
             if entries and not ENTRY_START.match(raw):
                 entries[-1] += "\n" + raw.removeprefix(CONTINUATION)
             else:

@@ -28,6 +28,7 @@ from panels.character_panel import CharacterScreen
 from panels.login_panel import Credentials, LoginScreen
 from panels.sidebar import Sidebar
 from presence import FRIENDS
+from sanitize import is_safe_url
 from terminal_config import APP_BINDINGS, APP_CSS
 
 
@@ -162,6 +163,9 @@ class ChatApp(App):
         self.show_login()
 
     def open_link(self, url:str) -> None:
+        if not is_safe_url(url):
+            self.notify(f"Not opening link, only http and https are allowed: {url}", severity="warning", timeout=10)
+            return
         opener = "open" if sys.platform == "darwin" else "xdg-open"
         graphical = sys.platform == "darwin" or os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
         if graphical and not os.environ.get("SSH_CONNECTION") and shutil.which(opener):

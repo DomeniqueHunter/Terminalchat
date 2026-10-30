@@ -282,6 +282,8 @@ With a custom data directory (`data_dir` or `TERMINALCHAT_DATA`) only `chats/` a
 
 If "Remember password" is enabled, the password is stored in plain text in `~/.config/terminalchat/config.json`. The file is created with permissions `600` (readable only by you).
 
+Everything received from the server (messages, names, channel titles and descriptions, status messages) is cleaned of control characters before it is shown or logged: terminal escape sequences (which could otherwise change the window title, clear the screen or overwrite your clipboard via OSC 52), other C0/C1 control characters and Unicode text direction overrides are removed. This also applies to old log files when they are read, so viewing logs with `cat` is safe for everything logged by this version. Clicked links are only opened if they use `http` or `https`.
+
 ## Disabling colors
 
 Set the `NO_COLOR` environment variable to remove all colors. Bold, italic and underline are kept:

@@ -6,6 +6,7 @@ from fchat.communication import COMM_ERROR
 
 from chat_log import logging
 from chat_store import CHANNEL
+from sanitize import clean_data
 
 
 Handler = Callable[[dict], Awaitable[None]]
@@ -69,7 +70,7 @@ class Consumer:
                 continue
 
             try:
-                data = json.loads(raw) if raw else {}
+                data = clean_data(json.loads(raw)) if raw else {}
                 if isinstance(data, dict) and isinstance(data.get("channel"), str):
                     data["channel"] = self.client.canonical_channel(data["channel"])
                 await handler(data)
