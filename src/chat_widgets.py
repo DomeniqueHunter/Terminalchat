@@ -110,7 +110,7 @@ class ChatInput(TextArea):
         Binding("up", "history_prev", show=False),
         Binding("down", "history_next", show=False),
         Binding("tab", "complete", show=False),
-        Binding("shift+enter,ctrl+j,alt+enter", "newline", show=False),
+        Binding("shift+enter,ctrl+enter,ctrl+j,alt+enter", "newline", show=False),
     ]
 
     class Submitted(Message):

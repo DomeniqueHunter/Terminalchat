@@ -64,7 +64,7 @@ class ChatApp(App):
             with Vertical(id="chat_container"):
                 yield VerticalScroll(id="chat_view")
                 yield CommandHints(id="command_hints")
-                yield ChatInput(placeholder="Type message or /help ...  (ctrl+j: new line)", id="chat_input")
+                yield ChatInput(placeholder="Type message or /help ...  (ctrl+enter: new line)", id="chat_input")
             yield Sidebar(id="sidebar")
         yield Footer()
 

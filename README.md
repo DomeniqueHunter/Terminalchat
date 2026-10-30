@@ -141,7 +141,7 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+f` | Show or hide the sidebar (friends / channel users) |
 | `ctrl+t` | Minimize: detach and keep running in the background (needs the launcher) |
 | `enter` | Send the message |
-| `shift+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` only works in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
+| `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
 | `up` / `down` | Move between lines; on the first / last line browse previously sent input |
 | `tab` | Complete a command |
 | `ctrl+p` | Command palette |
