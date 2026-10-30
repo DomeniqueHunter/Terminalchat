@@ -7,6 +7,7 @@ from typing import Any, Awaitable, Callable
 from chat_store import CHANNEL, CONSOLE
 from fchat import Opcode as opcode
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
+from panels.info_panel import InfoScreen
 
 
 DEFAULT_DICE = "1d6"
@@ -458,10 +459,10 @@ class ChatCommands:
         self.app.action_open_channels_list()
 
     async def cmd_help(self, args:str) -> None:
-        self.app.notify(HELP_TEXT, title="Commands", timeout=10)
+        self.app.push_screen(InfoScreen("Commands", HELP_TEXT))
 
     async def cmd_shortcuts(self, args:str) -> None:
-        self.app.notify(SHORTCUTS_TEXT, title="Shortcuts", timeout=15)
+        self.app.push_screen(InfoScreen("Shortcuts", SHORTCUTS_TEXT))
 
     async def cmd_quit(self, args:str) -> None:
         self.app.exit()
