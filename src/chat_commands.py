@@ -57,6 +57,8 @@ COMMAND_INFO = [
 
 COMMAND_NAMES = [name for name, _, _ in COMMAND_INFO]
 
+COMMAND_ALIASES = {"close": "leave", "create": "makeroom", "detach": "minimize", "keys": "shortcuts"}
+
 
 def command_usage(name:str, args:str) -> str:
     return f"/{name} {args}".rstrip()

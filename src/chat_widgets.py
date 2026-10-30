@@ -17,7 +17,7 @@ from textual.widgets._header import HeaderTitle
 
 from animated_eicon import make_eicon_widget
 from bbcode import to_text
-from chat_commands import command_usage, matching_commands
+from chat_commands import COMMAND_ALIASES, COMMAND_INFO, command_usage, matching_commands
 from chat_store import render_line, split_line
 from color_config import EICON_STYLE, NameStyle, make_style
 from eicons import MAX_PER_MESSAGE, EiconCache, extract_eicons
@@ -358,8 +358,11 @@ class CommandHints(Static):
     """
 
     def show_for(self, value:str) -> None:
-        if not value.startswith("/") or " " in value:
+        if not value.startswith("/"):
             self.display = False
+            return
+        if " " in value or "\n" in value:
+            self.show_usage(re.split(r"\s", value[1:], maxsplit=1)[0].lower())
             return
         typed = value[1:].lower()
         matches = matching_commands(typed)
@@ -383,3 +386,16 @@ class CommandHints(Static):
         self.update(text)
         self.display = True
 
+    def show_usage(self, name:str) -> None:
+        name = COMMAND_ALIASES.get(name, name)
+        entry = next((entry for entry in COMMAND_INFO if entry[0] == name), None)
+        if entry is None:
+            self.display = False
+            return
+        name, args, description = entry
+        text = Text()
+        text.append("/" + name, "bold")
+        text.append((" " + args) if args else "")
+        text.append("  " + description, "dim")
+        self.update(text)
+        self.display = True

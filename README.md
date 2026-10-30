@@ -141,7 +141,7 @@ Above the input field a bar shows the length of your text and the server limit (
 
 In *Ads* mode the input holds a separate ad text for each channel. `enter` posts it as role play ad and the text stays, so you can post it again later or edit it. The bar shows how long you have to wait until the next ad is allowed. Ad texts are saved and survive restarts. Your chat text is kept while you are in *Ads* mode and comes back when you switch to *Chat*. Commands starting with `/` still work in *Ads* mode. Opening a private chat or the console switches back to *Chat*.
 
-While typing a `/`, a list of matching commands with a short description appears above the input line. Press `tab` to complete the command as far as it is unambiguous.
+While typing a `/`, a list of matching commands with a short description appears above the input line. Press `tab` to complete the command as far as it is unambiguous. While you type the arguments, the usage of the command stays visible.
 
 ### Name completion
 
