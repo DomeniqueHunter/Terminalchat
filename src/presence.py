@@ -86,6 +86,13 @@ class Presence:
         self.ops.get(code, set()).discard(name.lower())
         self.on_change(code)
 
+    def complete_names(self, prefix:str, code:str | None=None) -> list[str]:
+        lowered = prefix.lower()
+        members = self.members.get(code, {}) if code else {}
+        first = [name for key, name in members.items() if key.startswith(lowered)]
+        rest = [name for key, name in self.online.items() if key.startswith(lowered) and key not in members]
+        return sorted(first, key=str.lower) + sorted(rest, key=str.lower)
+
     def online_friends(self) -> list[tuple[str, str, bool]]:
         entries = [(self.online[key], self.status.get(key, "online"), False) for key in self.friends if key in self.online]
         return sorted(entries, key=lambda entry: entry[0].lower())

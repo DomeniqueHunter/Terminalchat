@@ -1,4 +1,7 @@
 import os
+import re
+from dataclasses import dataclass
+from typing import Callable
 
 from rich.text import Text
 from textual.app import ComposeResult
@@ -98,6 +101,19 @@ class ChatLine(Vertical):
             view.call_after_refresh(view.scroll_end, animate=False)
 
 
+NAME_WORDS = 3
+
+
+@dataclass
+class NameCompletion:
+    row: int
+    start: int
+    names: list[str]
+    index: int
+    text: str
+    location: tuple[int, int]
+
+
 class ChatInput(TextArea):
 
     DEFAULT_CSS = """
@@ -110,6 +126,7 @@ class ChatInput(TextArea):
         Binding("up", "history_prev", show=False),
         Binding("down", "history_next", show=False),
         Binding("tab", "complete", show=False),
+        Binding("shift+tab", "complete_back", show=False),
         Binding("shift+enter,ctrl+enter,ctrl+j,alt+enter", "newline", show=False),
     ]
 
@@ -131,6 +148,8 @@ class ChatInput(TextArea):
         self.history_position: int | None = None
         self.draft = ""
         self.history_enabled = True
+        self.name_source: Callable[[str], list[str]] | None = None
+        self.name_completion: NameCompletion | None = None
 
     @property
     def value(self) -> str:
@@ -187,10 +206,58 @@ class ChatInput(TextArea):
         else:
             self.set_text(self.sent_history[self.history_position])
 
+    def is_command_word(self) -> bool:
+        return self.text.startswith("/") and " " not in self.text and "\n" not in self.text
+
     def action_complete(self) -> None:
-        if not self.text.startswith("/") or " " in self.text or "\n" in self.text:
+        if self.is_command_word():
+            self.complete_command()
+        elif not self.text:
             self.app.action_focus_next()
-            return
+        else:
+            self.complete_name(1)
+
+    def action_complete_back(self) -> None:
+        if self.is_command_word() or not self.text:
+            self.app.action_focus_previous()
+        else:
+            self.complete_name(-1)
+
+    def find_names(self, before:str) -> tuple[int, list[str]] | None:
+        if self.name_source is None:
+            return None
+        for count in range(NAME_WORDS, 0, -1):
+            match = re.search(r"(?:\S+\s+){%d}\S+$" % (count - 1), before)
+            if match is None:
+                continue
+            names = self.name_source(match.group(0))
+            if names:
+                return match.start(), names
+        return None
+
+    def complete_name(self, step:int) -> None:
+        state = self.name_completion
+        if state is not None and state.text == self.text and state.location == self.cursor_location:
+            state.index = (state.index + step) % len(state.names)
+        else:
+            row, column = self.cursor_location
+            found = self.find_names(self.document.get_line(row)[:column])
+            if found is None:
+                self.name_completion = None
+                return
+            start, names = found
+            state = NameCompletion(row, start, names, 0 if step > 0 else len(names) - 1, "", (row, column))
+        name = state.names[state.index]
+        insert = name if self.text.startswith("/") else f"[user]{name}[/user]"
+        result = self.replace(insert, (state.row, state.start), state.location)
+        self.move_cursor(result.end_location)
+        state.text = self.text
+        state.location = self.cursor_location
+        self.name_completion = state
+        if len(state.names) > 1:
+            self.app.notify(f"{state.index + 1}/{len(state.names)}: {name}", timeout=2)
+
+    def complete_command(self) -> None:
         names = [name for name, _, _ in matching_commands(self.text[1:])]
         if not names:
             return

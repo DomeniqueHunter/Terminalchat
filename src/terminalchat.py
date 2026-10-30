@@ -103,6 +103,7 @@ class ChatApp(App):
         self.set_interval(SIDEBAR_REFRESH_SECONDS, self.refresh_sidebar)
         self.set_interval(GENDER_SAVE_SECONDS, self.save_genders)
         self.set_interval(INPUT_BAR_REFRESH_SECONDS, self.refresh_input_bar)
+        self.chat_input.name_source = self.complete_names
         self.sidebar.name_style = self.name_style
         self.sub_title = "offline"
         await self.reset_view()
@@ -431,6 +432,14 @@ class ChatApp(App):
             self.query_one(CommandHints).show_for(event.text_area.text)
             self.store_ad_draft()
             self.refresh_input_bar()
+
+    def complete_names(self, prefix:str) -> list[str]:
+        chat = self.current_chat()
+        code = chat.key if chat is not None and chat.kind == CHANNEL else None
+        names = self.client.presence.complete_names(prefix, code)
+        if chat is not None and chat.kind == USER:
+            names.sort(key=lambda name: name.lower() != chat.key.lower())
+        return names
 
     def store_ad_draft(self) -> None:
         if self.input_mode != "ads" or not self.ad_channel:
