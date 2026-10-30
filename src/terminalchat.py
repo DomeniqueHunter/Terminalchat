@@ -11,11 +11,11 @@ from rich.style import Style
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Footer, Input, Label, ListItem, ListView, OptionList, Static
+from textual.widgets import Footer, Label, ListItem, ListView, OptionList, Static, TextArea
 
 import login
 from chat_store import CHANNEL, CONSOLE, USER, Chat, is_ad_line
-from chat_widgets import ChatLine, CommandHints, HistoryInput, StatusHeader
+from chat_widgets import ChatInput, ChatLine, CommandHints, StatusHeader
 from client import Client
 from color_config import gender_style
 import paths
@@ -64,7 +64,7 @@ class ChatApp(App):
             with Vertical(id="chat_container"):
                 yield VerticalScroll(id="chat_view")
                 yield CommandHints(id="command_hints")
-                yield HistoryInput(placeholder="Type message or /help ...", id="chat_input")
+                yield ChatInput(placeholder="Type message or /help ...  (ctrl+j: new line)", id="chat_input")
             yield Sidebar(id="sidebar")
         yield Footer()
 
@@ -94,7 +94,7 @@ class ChatApp(App):
         self.sidebar.name_style = self.name_style
         self.sub_title = "offline"
         await self.reset_view()
-        self.query_one("#chat_input", Input).focus()
+        self.query_one("#chat_input", ChatInput).focus()
         if self.config.is_complete():
             self.connect()
         else:
@@ -292,7 +292,7 @@ class ChatApp(App):
         if event.option_list.id not in ("friends_list", "members_list") or event.option.id is None:
             return
         await self.client.open_private(event.option.id)
-        self.query_one("#chat_input", Input).focus()
+        self.query_one("#chat_input", ChatInput).focus()
 
     def chat_line(self, line:str) -> ChatLine:
         return ChatLine(line, self.eicons, self.eicon_height, self.name_style)
@@ -384,7 +384,7 @@ class ChatApp(App):
         index = event.list_view.index
         if index is not None and 0 <= index < len(self.list_ids) and self.list_ids[index]:
             await self.open_chat(self.list_ids[index])
-            self.query_one("#chat_input", Input).focus()
+            self.query_one("#chat_input", ChatInput).focus()
 
     def action_open_channels_list(self) -> None:
         if not isinstance(self.screen, ChannelsList):
@@ -402,19 +402,16 @@ class ChatApp(App):
         self.client.store.remove(chat.id)
         await self.chat_removed(chat.id)
 
-    def on_input_changed(self, event:Input.Changed) -> None:
-        if event.input.id == "chat_input":
-            self.query_one(CommandHints).show_for(event.value)
+    def on_text_area_changed(self, event:TextArea.Changed) -> None:
+        if event.text_area.id == "chat_input":
+            self.query_one(CommandHints).show_for(event.text_area.text)
 
-    async def on_input_submitted(self, event:Input.Submitted) -> None:
-        if event.input.id != "chat_input":
-            return
+    async def on_chat_input_submitted(self, event:ChatInput.Submitted) -> None:
         text = event.value.strip()
-        event.input.value = ""
+        event.chat_input.set_text("")
         if not text:
             return
-        if isinstance(event.input, HistoryInput):
-            event.input.remember(text)
+        event.chat_input.remember(text)
 
         if text.startswith("/"):
             await self.client.commands.handle(text)

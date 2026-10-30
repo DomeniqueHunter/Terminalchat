@@ -88,6 +88,7 @@ Type commands into the input line.
 | `/priv <character>` | Open a private chat with an online character |
 | `/invite <character>` | Invite a character into the current (private) channel; when you are invited, a notification shows how to join |
 | `/me <text>` | Send an emote to the current chat |
+| `/ad <text>` | Post a role play ad in the current channel. The server allows one ad per channel every few minutes (default 10); the client tells you how long to wait |
 | `/roll [dice]` | Roll dice on the server, visible to everyone in the chat (e.g. `/roll 1d20`, `/roll 2d6+3`); default `1d6` |
 | `/bottle` | Spin the bottle (channels only) |
 | `/channels` | Open the channel browser |
@@ -106,7 +107,7 @@ Type commands into the input line.
 | `/help` | Show the command list |
 | `/quit` | Exit |
 
-While typing a `/`, a list of matching commands with a short description appears above the input line. The best match is suggested in grey: press `→` to accept it, or `tab` to complete the command as far as it is unambiguous.
+While typing a `/`, a list of matching commands with a short description appears above the input line. Press `tab` to complete the command as far as it is unambiguous.
 
 Names and channel titles containing spaces work without quotes (`/priv Domenique Hunter`); quotes are accepted as well.
 
@@ -139,7 +140,10 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+l` | Leave / close the current chat |
 | `ctrl+f` | Show or hide the sidebar (friends / channel users) |
 | `ctrl+t` | Minimize: detach and keep running in the background (needs the launcher) |
-| `up` / `down` | Browse previously sent input |
+| `enter` | Send the message |
+| `shift+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` only works in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
+| `up` / `down` | Move between lines; on the first / last line browse previously sent input |
+| `tab` | Complete a command |
 | `ctrl+p` | Command palette |
 | `ctrl+q` | Quit |
 | `escape` | Close a dialog |

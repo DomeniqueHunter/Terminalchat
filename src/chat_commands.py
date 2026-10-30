@@ -33,6 +33,7 @@ COMMAND_INFO = [
     ("setdescription", "<text>", "set the channel description"),
     ("setmode", "<chat|ads|both>", "allow chat, ads or both"),
     ("me", "<text>", "emote in the current chat"),
+    ("ad", "<text>", "post a role play ad in the current channel"),
     ("roll", "[dice]", "roll dice on the server, e.g. 2d6+3 (default 1d6)"),
     ("bottle", "", "spin the bottle (channels only)"),
     ("status", "[status] [text]", "set status and/or status message"),
@@ -100,6 +101,7 @@ class ChatCommands:
             "setdescription": self.cmd_setdescription,
             "setmode": self.cmd_setmode,
             "me": self.cmd_me,
+            "ad": self.cmd_ad,
             "roll": self.cmd_roll,
             "bottle": self.cmd_bottle,
             "status": self.cmd_status,
@@ -159,6 +161,25 @@ class ChatCommands:
         if chat is None or not args:
             return
         await self.client.send(chat, f"/me {args}")
+
+    async def cmd_ad(self, args:str) -> None:
+        chat = self.current_channel()
+        if chat is None:
+            return
+        message = args.strip()
+        if not message:
+            self.app.notify("Usage: /ad <text>", severity="warning")
+            return
+        limit = int(self.client.variables.get("lfrp_max", 50000))
+        if len(message) > limit:
+            self.app.notify(f"Ad too long ({len(message)}/{limit})", severity="warning")
+            return
+        wait = self.client.ad_wait_seconds(chat.key)
+        if wait:
+            minutes, seconds = divmod(wait, 60)
+            self.app.notify(f"You can post the next ad in {chat.title} in {minutes}:{seconds:02d} min", severity="warning")
+            return
+        await self.client.send_ad(chat, message)
 
     async def cmd_invite(self, args:str) -> None:
         chat = self.app.current_chat()

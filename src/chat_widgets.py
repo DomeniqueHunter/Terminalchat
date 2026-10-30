@@ -7,14 +7,14 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.content import Content
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
-from textual.events import Click
-from textual.suggester import SuggestFromList
-from textual.widgets import Header, Input, Static
+from textual.events import Click, Key
+from textual.message import Message
+from textual.widgets import Header, Static, TextArea
 from textual.widgets._header import HeaderTitle
 
 from animated_eicon import make_eicon_widget
 from bbcode import to_text
-from chat_commands import COMMAND_NAMES, command_usage, matching_commands
+from chat_commands import command_usage, matching_commands
 from chat_store import render_line, split_line
 from color_config import EICON_STYLE, NameStyle, make_style
 from eicons import MAX_PER_MESSAGE, EiconCache, extract_eicons
@@ -98,62 +98,103 @@ class ChatLine(Vertical):
             view.call_after_refresh(view.scroll_end, animate=False)
 
 
-class HistoryInput(Input):
+class ChatInput(TextArea):
+
+    DEFAULT_CSS = """
+    ChatInput {
+        height: 5;
+    }
+    """
 
     BINDINGS = [
         Binding("up", "history_prev", show=False),
         Binding("down", "history_next", show=False),
         Binding("tab", "complete", show=False),
+        Binding("shift+enter,ctrl+j,alt+enter", "newline", show=False),
     ]
 
-    def __init__(self, *args:object, max_history:int=100, **kwargs:object) -> None:
-        suggester = SuggestFromList([f"/{name}" for name in COMMAND_NAMES], case_sensitive=False)
-        super().__init__(*args, suggester=suggester, **kwargs)
+    class Submitted(Message):
+
+        def __init__(self, chat_input:"ChatInput", value:str) -> None:
+            super().__init__()
+            self.chat_input = chat_input
+            self.value = value
+
+        @property
+        def control(self) -> "ChatInput":
+            return self.chat_input
+
+    def __init__(self, *, placeholder:str="", id:str | None=None, max_history:int=100) -> None:
+        super().__init__(id=id, soft_wrap=True, show_line_numbers=False, placeholder=placeholder)
         self.max_history = max_history
-        self.history: list[str] = []
-        self.position: int | None = None
+        self.sent_history: list[str] = []
+        self.history_position: int | None = None
         self.draft = ""
 
-    def remember(self, text:str) -> None:
-        if text and (not self.history or self.history[-1] != text):
-            self.history.append(text)
-            del self.history[:-self.max_history]
-        self.position = None
-        self.draft = ""
+    @property
+    def value(self) -> str:
+        return self.text
+
+    @value.setter
+    def value(self, text:str) -> None:
+        self.set_text(text)
 
     def set_text(self, text:str) -> None:
-        self.value = text
-        self.cursor_position = len(text)
+        self.text = text
+        self.move_cursor(self.document.end)
+
+    async def _on_key(self, event:Key) -> None:
+        if event.key == "enter":
+            event.stop()
+            event.prevent_default()
+            self.post_message(self.Submitted(self, self.text))
+
+    def action_newline(self) -> None:
+        start, end = self.selection
+        self.replace("\n", start, end)
+
+    def remember(self, text:str) -> None:
+        if text and (not self.sent_history or self.sent_history[-1] != text):
+            self.sent_history.append(text)
+            del self.sent_history[:-self.max_history]
+        self.history_position = None
+        self.draft = ""
 
     def action_history_prev(self) -> None:
-        if not self.history:
+        if self.cursor_location[0] > 0:
+            self.action_cursor_up()
             return
-        if self.position is None:
-            self.draft = self.value
-            self.position = len(self.history)
-        if self.position > 0:
-            self.position -= 1
-            self.set_text(self.history[self.position])
+        if not self.sent_history:
+            return
+        if self.history_position is None:
+            self.draft = self.text
+            self.history_position = len(self.sent_history)
+        if self.history_position > 0:
+            self.history_position -= 1
+            self.set_text(self.sent_history[self.history_position])
 
     def action_history_next(self) -> None:
-        if self.position is None:
+        if self.cursor_location[0] < self.document.line_count - 1:
+            self.action_cursor_down()
             return
-        self.position += 1
-        if self.position >= len(self.history):
-            self.position = None
+        if self.history_position is None:
+            return
+        self.history_position += 1
+        if self.history_position >= len(self.sent_history):
+            self.history_position = None
             self.set_text(self.draft)
         else:
-            self.set_text(self.history[self.position])
+            self.set_text(self.sent_history[self.history_position])
 
     def action_complete(self) -> None:
-        if not self.value.startswith("/") or " " in self.value:
+        if not self.text.startswith("/") or " " in self.text or "\n" in self.text:
             self.app.action_focus_next()
             return
-        names = [name for name, _, _ in matching_commands(self.value[1:])]
+        names = [name for name, _, _ in matching_commands(self.text[1:])]
         if not names:
             return
         completion = names[0] + " " if len(names) == 1 else os.path.commonprefix(names)
-        if len(completion) >= len(self.value) - 1:
+        if len(completion) >= len(self.text) - 1:
             self.set_text("/" + completion)
 
 

@@ -43,6 +43,7 @@ class Consumer:
             opcode.NUMBER_OF_CONNECTED_USERS: self.on_user_count,
             opcode.BROADCAST: self.on_broadcast,
             opcode.SITE_EVENT: self.on_site_event,
+            opcode.VARIABLES: self.on_variable,
             opcode.SYSTEM_MESSAGE: self.on_system,
         }
 
@@ -160,6 +161,10 @@ class Consumer:
         self.client.set_offline(name)
         if friend:
             await self.client.log_console(f"[user]{name}[/user] went offline")
+
+    async def on_variable(self, data:dict) -> None:
+        if "variable" in data:
+            self.client.variables[data["variable"]] = data.get("value")
 
     async def on_hello(self, data:dict) -> None:
         await self.client.log_console(data.get("message", "Server hello"))

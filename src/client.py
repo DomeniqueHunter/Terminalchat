@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,8 @@ class Client:
 
         self.pending_open: set[str] = set()
         self.pending_create: set[str] = set()
+        self.variables: dict[str, object] = {"lfrp_flood": 600, "lfrp_max": 50000}
+        self.last_ad: dict[str, float] = {}
         self.joining: set[str] = set()
         self.presence = Presence(app.presence_changed)
 
@@ -221,6 +224,17 @@ class Client:
     async def on_channel_message(self, code:str, sender:str, message:str) -> None:
         chat = self.channel_chat(code)
         line = self.store.append(chat, sender, message)
+        await self.app.show_line(chat.id, line)
+
+    def ad_wait_seconds(self, code:str) -> int:
+        flood = float(self.variables.get("lfrp_flood", 600))
+        elapsed = time.monotonic() - self.last_ad.get(code.lower(), -flood)
+        return max(0, int(flood - elapsed + 0.999))
+
+    async def send_ad(self, chat:Chat, message:str) -> None:
+        await self.comm.message(opcode.ROLEPLAY_AD, {"channel": chat.key, "message": message})
+        self.last_ad[chat.key.lower()] = time.monotonic()
+        line = self.store.append(chat, f"{AD_PREFIX}{self.character}", message)
         await self.app.show_line(chat.id, line)
 
     async def on_ad(self, code:str, sender:str, message:str) -> None:
