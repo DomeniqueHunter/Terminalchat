@@ -144,7 +144,7 @@ While typing a `/`, a list of matching commands with a short description appears
 
 ### Name completion
 
-Type the beginning of a character name and press `tab`: it is replaced by `[user]Full Name[/user]`. If several characters match, press `tab` again to cycle through them, `shift+tab` to go back; a short notification shows the position (`2/5: Max Mustermann`). Up to three words are considered, so `Max Mu` completes to `Max Mustermann`. Users of the open channel come first, then all other online characters. In commands (`/priv Max`, `/invite Ma`) the plain name is inserted without `[user]` tags.
+Type the beginning of a character name and press `tab`: it is replaced by `[user]Full Name[/user]`. If several characters match, press `tab` again to cycle through them, `ctrl+tab` to go back (only in terminals that report `ctrl+tab` separately); a short notification shows the position (`2/5: Max Mustermann`). Up to three words are considered, so `Max Mu` completes to `Max Mustermann`. Users of the open channel come first, then all other online characters. In commands (`/priv Max`, `/invite Ma`) the plain name is inserted without `[user]` tags.
 
 Names and channel titles containing spaces work without quotes (`/priv Domenique Hunter`); quotes are accepted as well.
 
@@ -181,7 +181,7 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `enter` | Send the message |
 | `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
 | `up` / `down` | Move between lines; on the first / last line browse previously sent input |
-| `tab` / `shift+tab` | Complete a command, or complete a character name (press again to cycle forward / backward) |
+| `tab` / `ctrl+tab` | Complete a command, or complete a character name (press again to cycle forward / backward) |
 | `ctrl+p` | Command palette |
 | `ctrl+q` | Quit |
 | `escape` | Close a dialog |
