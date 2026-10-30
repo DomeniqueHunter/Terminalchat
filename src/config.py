@@ -21,6 +21,7 @@ class Config(dict):
 
     def __init__(self, file_path:str) -> None:
         self.path = Path(file_path).expanduser().resolve()
+        self.data_dir: Path | None = None
         data = dict(DEFAULTS)
         if self.path.exists():
             with open(self.path, "r", encoding="utf-8") as file:
@@ -34,6 +35,7 @@ class Config(dict):
         data = dict(self)
         if not data.get("remember_password"):
             data["password"] = ""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = self.path.with_suffix(".tmp")
         with open(tmp_path, "w", encoding="utf-8") as file:
             json.dump(data, file, indent=4, ensure_ascii=False)

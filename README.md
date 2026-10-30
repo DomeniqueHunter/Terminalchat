@@ -69,11 +69,10 @@ The launcher runs the client inside its own [tmux](https://github.com/tmux/tmux)
 
 Without tmux installed the launcher starts the client in the foreground; `/minimize` is then unavailable.
 
-To run the client directly without the launcher, start it from inside `src/`, because `config.json`, logs and chat history are read relative to the working directory:
+To run the client directly without the launcher (e.g. for debugging, as error messages then stay visible):
 
 ```bash
-cd src
-python3 terminalchat.py
+venv/bin/python src/terminalchat.py
 ```
 
 On the first start (or if account, password or character are missing) a login screen appears. Enter your f-list account and password, then pick a character. Check "Remember password" if the password should be stored in `config.json`.
@@ -157,7 +156,7 @@ The sidebar on the right has two tabs: *Friends* lists your friends that are onl
 
 ## Configuration
 
-`src/config.json` is created on the first login. `src/config.json.example` shows all options:
+The configuration is stored in `~/.config/terminalchat/config.json` and created on the first login. `src/config.json.example` shows all options:
 
 | Option | Default | Description |
 |---|---|---|
@@ -166,6 +165,7 @@ The sidebar on the right has two tabs: *Friends* lists your friends that are onl
 | `character` | `""` | Character to log in with |
 | `remember_password` | `true` | Store the password in `config.json` |
 | `default_channels` | `[]` | Channels joined on every start |
+| `data_dir` | `~/.local/share/terminalchat` | Where logs and per-character data are stored |
 | `show_sidebar` | `false` | Show the sidebar on startup |
 | `show_ads` | `true` | Show ads in channels without an own `/ads` setting |
 | `log_keep_days` | `0` | Delete daily log files older than this many days (including today); `0` keeps everything |
@@ -177,32 +177,50 @@ The sidebar on the right has two tabs: *Friends* lists your friends that are onl
 
 Colors can be adjusted in `src/color_config.py`, including the gender colors (`GENDER_STYLES`). Names with unknown gender keep the default color.
 
+### Locations
+
+The client follows the XDG base directory specification and respects `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and `XDG_CACHE_HOME`.
+
+| Purpose | Default | Override (highest priority first) |
+|---|---|---|
+| Configuration | `~/.config/terminalchat/config.json` | `TERMINALCHAT_CONFIG` |
+| Data (logs, pins, status, ...) | `~/.local/share/terminalchat/` | `TERMINALCHAT_DATA`, then `data_dir` in the config |
+| Cache (eicons) | `~/.cache/terminalchat/` | `XDG_CACHE_HOME` |
+
+The console shows the paths in use on every start. When you change `data_dir`, existing data is not moved; move the folder yourself.
+
+Older versions stored `config.json` and `chats/` inside `src/`. On the first start they are moved to the new locations automatically and the console reports it. If something already exists at the target, the old files are left untouched.
+
 ## Files
 
 | Path | Content |
 |---|---|
-| `src/config.json` | Configuration and credentials (permissions `600`) |
-| `src/chats/<character>/<name>/YYYY-MM-DD.log` | Private chat logs, one file per day |
-| `src/chats/<character>/channels/<code>/YYYY-MM-DD.log` | Channel logs, one file per day |
-| `src/chats/<character>/pins.json` | Pinned chats |
-| `src/chats/<character>/_console/YYYY-MM-DD.log` | Console history, one file per day |
-| `src/chats/<character>/status.json` | Your status and status message |
-| `src/chats/<character>/ads.json` | Per-channel ad visibility |
-| `src/chats/genders.json` | Known genders of other characters, used for name colors |
-| `~/.cache/terminalchat/eicons/` | Eicon cache (respects `XDG_CACHE_HOME`) |
-| `src/debug.log` | Debug output |
+Paths below `<data>` refer to the data directory (default `~/.local/share/terminalchat`).
+
+| Path | Content |
+|---|---|
+| `~/.config/terminalchat/config.json` | Configuration and credentials (permissions `600`) |
+| `<data>/chats/<character>/<name>/YYYY-MM-DD.log` | Private chat logs, one file per day |
+| `<data>/chats/<character>/channels/<code>/YYYY-MM-DD.log` | Channel logs, one file per day |
+| `<data>/chats/<character>/_console/YYYY-MM-DD.log` | Console history, one file per day |
+| `<data>/chats/<character>/pins.json` | Pinned chats |
+| `<data>/chats/<character>/status.json` | Your status and status message |
+| `<data>/chats/<character>/ads.json` | Per-channel ad visibility |
+| `<data>/chats/genders.json` | Known genders of other characters, used for name colors |
+| `<data>/debug.log` | Debug output |
+| `~/.cache/terminalchat/eicons/` | Eicon cache |
 | `tmux.conf` | Settings for the launcher's tmux server |
 
 Older single-file logs (`chat.log`, `console.log`) are split into daily files automatically the first time a chat is opened; the original is kept as `chat.log.bak` / `console.log.bak` and can be deleted afterwards.
 
 ## Security note
 
-If "Remember password" is enabled, the password is stored in plain text in `config.json`. The file is created with permissions `600` (readable only by you). Do not commit it; it is listed in `.gitignore`.
+If "Remember password" is enabled, the password is stored in plain text in `~/.config/terminalchat/config.json`. The file is created with permissions `600` (readable only by you).
 
 ## Disabling colors
 
 Set the `NO_COLOR` environment variable to remove all colors. Bold, italic and underline are kept:
 
 ```bash
-NO_COLOR=1 python3 terminalchat.py
+NO_COLOR=1 ./terminalchat
 ```

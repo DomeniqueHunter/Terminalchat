@@ -18,6 +18,8 @@ from chat_store import CHANNEL, CONSOLE, USER, Chat, is_ad_line
 from chat_widgets import ChatLine, CommandHints, HistoryInput, StatusHeader
 from client import Client
 from color_config import gender_style
+import paths
+from chat_log import set_log_dir
 from config import Config
 from eicons import EiconCache
 from panels.channels_list_panel import ChannelsList
@@ -44,6 +46,7 @@ class ChatApp(App):
         self.client = Client(config, self)
         self.characters: list[str] = []
         self.online = False
+        self.startup_notes: list[str] = []
         self.sidebar_dirty: set[str] = {FRIENDS}
         self.list_lock = asyncio.Lock()
         self.eicons = None
@@ -225,6 +228,9 @@ class ChatApp(App):
         for index, channel in enumerate(defaults):
             await self.client.join(channel, open_chat=index == 0)
         self.run_worker(self.periodic_worker(), group="periodic")
+        for note in self.startup_notes:
+            await self.client.log_console(note)
+        self.startup_notes = []
         await self.client.log_console(f"Connected as [user]{self.client.character}[/user]")
         first = self.first_chat_id()
         if not defaults and first and self.active_chat is None:
@@ -424,9 +430,22 @@ class ChatApp(App):
         await self.client.send(chat, text)
 
 
+def build_app() -> ChatApp:
+    config_file = paths.config_file()
+    notes = [paths.migrate_config(config_file)]
+    config = Config(str(config_file))
+    config.data_dir = paths.data_dir(config.get("data_dir"))
+    notes.append(paths.migrate_data(config.data_dir))
+    set_log_dir(config.data_dir)
+
+    app = ChatApp(config)
+    app.startup_notes = [note for note in notes if note]
+    app.startup_notes.append(f"Config: {config.path} | Data: {config.data_dir}")
+    return app
+
+
 def main() -> None:
-    config = Config("config.json")
-    ChatApp(config).run()
+    build_app().run()
 
 
 if __name__ == "__main__":

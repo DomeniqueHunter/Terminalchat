@@ -39,7 +39,7 @@ class Chat:
 
 class ChatStore:
 
-    def __init__(self, character:str, base_dir:str="chats") -> None:
+    def __init__(self, character:str, base_dir:str | Path="chats") -> None:
         self.base = Path(base_dir) / character
         self.chats: dict[str, Chat] = {}
         self.migrated: set[str] = set()

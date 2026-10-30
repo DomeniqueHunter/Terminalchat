@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 from fchat import Channel
@@ -25,7 +26,8 @@ class Client:
 
         self.comm = Communication(config)
         self.channel_manager = ChannelManager(join_method=self._join_method)
-        self.store = ChatStore(self.character)
+        chats_dir = config.data_dir / "chats" if config.data_dir else Path("chats")
+        self.store = ChatStore(self.character, chats_dir)
         self.console = self.store.get_or_create(CONSOLE, CONSOLE, "Console")
         self.consumer = Consumer(self)
         self.commands = ChatCommands(self)
