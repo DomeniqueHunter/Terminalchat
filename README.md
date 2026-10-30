@@ -77,6 +77,33 @@ venv/bin/python src/terminalchat.py
 
 On the first start (or if account, password or character are missing) a login screen appears. Enter your f-list account and password, then pick a character. Check "Remember password" if the password should be stored in `config.json`.
 
+## Platforms
+
+The client is developed and tested on Linux; macOS should work as well. On Windows the client itself should run (Python, Textual and all libraries are cross-platform), but this is untested and some parts are Linux-specific.
+
+### Windows
+
+The easiest way is [WSL](https://learn.microsoft.com/windows/wsl/): inside WSL everything works as on Linux, including `setup.sh`, tmux and `/minimize`.
+
+Running natively on Windows, set up and start the client manually:
+
+```bat
+python -m venv venv
+venv\Scripts\pip install -r requirements.txt
+venv\Scripts\python src\terminalchat.py
+```
+
+Limitations on native Windows:
+
+| Feature | Status |
+|---|---|
+| `terminalchat` launcher, `setup.sh` | Bash scripts, not available |
+| `/minimize`, `ctrl+t` | Needs tmux, not available |
+| Opening links | `xdg-open` is missing, links are copied to the clipboard instead |
+| File locations | `~/.config/terminalchat` and `~/.local/share/terminalchat` below your user folder instead of `%APPDATA%` |
+| Password file permissions | `chmod 600` has no effect; the file is only protected by the normal user permissions |
+| Eicons as images | Needs a terminal with Sixel support (recent Windows Terminal); otherwise block graphics |
+
 ## Commands
 
 Type commands into the input line.
