@@ -36,6 +36,8 @@ LIST_REFRESH_SECONDS = 300
 SIDEBAR_REFRESH_SECONDS = 1.0
 GENDER_SAVE_SECONDS = 30
 INPUT_BAR_REFRESH_SECONDS = 1.0
+RECONNECT_DELAYS = (5, 15, 30, 60, 120, 300)
+NO_RECONNECT_ERRORS = {9, 31}
 CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+r: ads)"
 
 
@@ -193,6 +195,7 @@ class ChatApp(App):
     async def shutdown_client(self) -> None:
         self.save_genders()
         self.online = False
+        self.workers.cancel_group(self, "reconnect")
         self.workers.cancel_group(self, "receiver")
         self.workers.cancel_group(self, "periodic")
         await self.client.stop()
@@ -239,11 +242,7 @@ class ChatApp(App):
             self.notify(error, severity="error")
             return
 
-        self.online = True
-        self.update_subtitle()
-        await self.client.restore_status()
-        self.run_worker(self.client.consumer.receive(), group="receiver")
-
+        await self.after_connect()
         await self.client.restore_pins()
         defaults = self.client.config.get("default_channels") or []
         for index, channel in enumerate(defaults):
@@ -257,6 +256,52 @@ class ChatApp(App):
         if not defaults and first and self.active_chat is None:
             await self.open_chat(first)
 
+    async def after_connect(self) -> None:
+        self.online = True
+        self.update_subtitle()
+        await self.client.restore_status()
+        self.run_worker(self.client.consumer.receive(), group="receiver")
+
+    def schedule_reconnect(self, immediate:bool=False) -> None:
+        self.run_worker(self.reconnect_worker(immediate), exclusive=True, group="reconnect")
+
+    async def reconnect_worker(self, immediate:bool) -> None:
+        attempt = 0
+        while not self.online:
+            delay = 0 if immediate and attempt == 0 else RECONNECT_DELAYS[min(attempt, len(RECONNECT_DELAYS) - 1)]
+            for remaining in range(delay, 0, -1):
+                self.sub_title = f"disconnected \u2014 reconnecting in {remaining}s (/reconnect: now)"
+                await asyncio.sleep(1)
+            attempt += 1
+            self.sub_title = "reconnecting..."
+            error = await self.reconnect_once()
+            if not error:
+                return
+            await self.client.log_console(f"Reconnect attempt {attempt} failed: {error}")
+
+    async def reconnect_once(self) -> str | None:
+        result = await login.fetch_ticket(str(self.config.get("account")), str(self.config.get("password")))
+        if result.error and not result.temporary:
+            self.sub_title = "offline"
+            self.show_login(result.error)
+            return ""
+        if result.error:
+            return result.error
+        await self.client.stop()
+        self.client.reset_connection()
+        error = await self.client.start(result.ticket)
+        if error:
+            await self.client.stop()
+            return error
+        await self.after_connect()
+        for chat in list(self.client.store.chats.values()):
+            if chat.kind == CHANNEL:
+                await self.client.join(chat.key, open_chat=False)
+        self.sidebar_dirty.add(FRIENDS)
+        await self.client.log_console(f"Reconnected as [user]{self.client.character}[/user]")
+        self.notify("Reconnected to the chat server")
+        return None
+
     async def periodic_worker(self) -> None:
         while True:
             removed = self.client.store.cleanup(int(self.config.get("log_keep_days", 0)))
@@ -269,8 +314,13 @@ class ChatApp(App):
         self.online = False
         self.sub_title = "disconnected"
         await self.client.log_console("Connection to the chat server lost")
-        self.notify("Connection to the chat server lost", severity="error", timeout=15)
         await self.client.stop()
+        if self.client.last_error in NO_RECONNECT_ERRORS:
+            await self.client.log_console("Not reconnecting automatically after this error, use /reconnect")
+            self.notify("Connection to the chat server lost, use /reconnect", severity="error", timeout=15)
+            return
+        self.notify("Connection to the chat server lost, reconnecting ...", severity="error", timeout=10)
+        self.schedule_reconnect()
 
     def channel_lists_updated(self) -> None:
         if isinstance(self.screen, ChannelsList):
@@ -525,6 +575,9 @@ class ChatApp(App):
         bar.show(info, self.input_mode, chat is not None and chat.kind == CHANNEL)
 
     async def on_chat_input_submitted(self, event:ChatInput.Submitted) -> None:
+        if event.value.strip() and not event.value.startswith("/") and not self.online:
+            self.notify("Not connected, message not sent (/reconnect to try now)", severity="warning")
+            return
         if self.input_mode == "ads" and not event.value.startswith("/"):
             if event.value.strip():
                 await self.client.commands.cmd_ad(event.value.strip())

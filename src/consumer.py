@@ -207,6 +207,8 @@ class Consumer:
         await self.client.on_invited(data.get("sender", "?"), code, data.get("title") or code)
 
     async def on_error(self, data:dict) -> None:
+        if isinstance(data.get("number"), int):
+            self.client.last_error = data["number"]
         text = f"Error {data.get('number')}: {data.get('message')}"
         self.app.notify(text, severity="error")
         await self.client.log_console(text)

@@ -54,6 +54,7 @@ COMMAND_INFO = [
     ("ads", "[on|off]", "show or hide ads in the current channel"),
     ("gif", "[on|off]", "toggle animated eicons"),
     ("char", "[name]", "switch character"),
+    ("reconnect", "", "reconnect to the chat server now"),
     ("logout", "", "log out and forget password"),
     ("minimize", "", "detach, keep running in background"),
     ("chatstatus", "", "show the partner's status or the channel description"),
@@ -148,6 +149,7 @@ class ChatCommands:
             "ads": self.cmd_ads,
             "gif": self.cmd_gif,
             "char": self.cmd_char,
+            "reconnect": self.cmd_reconnect,
             "logout": self.cmd_logout,
             "minimize": self.cmd_minimize,
             "detach": self.cmd_minimize,
@@ -475,6 +477,12 @@ class ChatCommands:
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()
+
+    async def cmd_reconnect(self, args:str) -> None:
+        if self.app.online:
+            self.app.notify("Already connected")
+            return
+        self.app.schedule_reconnect(immediate=True)
 
     async def cmd_chatstatus(self, args:str) -> None:
         chat = self.app.current_chat()

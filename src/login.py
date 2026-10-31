@@ -13,6 +13,7 @@ class LoginResult:
     characters: list[str] = field(default_factory=list)
     default_character: str = ""
     error: str = ""
+    temporary: bool = False
 
 
 async def fetch_ticket(account:str, password:str) -> LoginResult:
@@ -31,13 +32,13 @@ async def fetch_ticket(account:str, password:str) -> LoginResult:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(API_TICKET_URL, data=data) as response:
                 if response.status != 200:
-                    return LoginResult(error=f"Login server answered with HTTP {response.status}")
+                    return LoginResult(error=f"Login server answered with HTTP {response.status}", temporary=True)
                 payload = await response.json(content_type=None)
     except Exception as error:
-        return LoginResult(error=f"Login request failed: {error}")
+        return LoginResult(error=f"Login request failed: {error}", temporary=True)
 
     if not isinstance(payload, dict):
-        return LoginResult(error="Unexpected answer from login server")
+        return LoginResult(error="Unexpected answer from login server", temporary=True)
     if payload.get("error"):
         return LoginResult(error=str(payload["error"]))
 

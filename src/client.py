@@ -44,6 +44,7 @@ class Client:
         self.variables: dict[str, object] = {"lfrp_flood": 600, "lfrp_max": 50000, "chat_max": 4096, "priv_max": 50000}
         self.last_ad: dict[str, float] = {}
         self.descriptions: dict[str, str] = {}
+        self.last_error: int | None = None
         self.joining: set[str] = set()
         self.presence = Presence(app.presence_changed)
 
@@ -61,6 +62,15 @@ class Client:
 
     async def stop(self) -> None:
         await self.comm.stop()
+
+    def reset_connection(self) -> None:
+        self.comm = Communication(self.config)
+        self.channel_manager = ChannelManager(join_method=self._join_method)
+        self.presence = Presence(self.app.presence_changed)
+        self.joining.clear()
+        self.pending_open.clear()
+        self.pending_create.clear()
+        self.last_error = None
 
     def is_me(self, name:str | None) -> bool:
         return bool(name) and name.lower() == self.character.lower()
@@ -144,7 +154,14 @@ class Client:
         chat = self.store.get_or_create(name, USER)
         await self.app.open_chat(chat.id)
 
+    def check_online(self) -> bool:
+        if not self.app.online:
+            self.app.notify("Not connected, nothing was sent", severity="warning")
+        return self.app.online
+
     async def send(self, chat:Chat, message:str) -> None:
+        if not self.check_online():
+            return
         if chat.kind == CHANNEL:
             await self.comm.message(opcode.CHANNEL_MESSAGE, {"channel": chat.key, "message": message})
         else:
@@ -234,6 +251,8 @@ class Client:
         return max(0, int(flood - elapsed + 0.999))
 
     async def send_ad(self, chat:Chat, message:str) -> None:
+        if not self.check_online():
+            return
         await self.comm.message(opcode.ROLEPLAY_AD, {"channel": chat.key, "message": message})
         self.last_ad[chat.key.lower()] = time.monotonic()
         line = self.store.append(chat, f"{AD_PREFIX}{self.character}", message)

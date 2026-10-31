@@ -129,6 +129,7 @@ Type commands into the input line.
 | `/ads [on\|off]` | Show or hide ads (role play ads) in the current channel; hidden ads are still logged and reappear with `/ads on`. Stored per channel and character |
 | `/gif [on\|off]` | Turn eicon animation on or off; without argument it toggles |
 | `/char [name]` | Switch character; without a name a character picker opens |
+| `/reconnect` | Reconnect to the chat server now (see *Connection loss*) |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
@@ -197,6 +198,14 @@ Click a link to open it in your browser. When the client runs over SSH or withou
 The console collects global events: connection, server messages and errors, broadcasts, site events, invitations and friends going online or offline. It is read-only and cannot be closed. Channel related events (kicks, bans, timeouts, operator changes, channel notices) are shown in the affected channel instead.
 
 The sidebar on the right has two tabs: *Friends* lists your friends that are online, *Channel* lists the users of the open channel (channel operators first, marked with `@`). It switches to the matching tab when you change chats. Press `enter` on a name to open a private chat. Status symbols: `+` looking, `•` online, `~` idle/away, `-` busy, `x` do not disturb.
+
+### Connection loss
+
+When the connection to the chat server is lost, the client reconnects automatically. It waits 5, 15, 30, 60 and 120 seconds between the first attempts, then tries every 5 minutes; the title bar shows the countdown. `/reconnect` tries immediately. After reconnecting, all open channels are joined again and your status is restored; private chats simply stay open.
+
+While disconnected, messages are not sent: the input keeps your text and a warning is shown.
+
+There is no automatic reconnect after the server disconnected you because you logged in elsewhere with the same character or because you are banned (errors 31 and 9), so two clients do not keep kicking each other out. Use `/reconnect` in that case. If the login itself is rejected (e.g. the password changed), the login screen is shown.
 
 ## Configuration
 
