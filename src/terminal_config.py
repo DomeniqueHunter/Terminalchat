@@ -5,6 +5,7 @@ APP_BINDINGS = [
         ("ctrl+f", "toggle_sidebar", "Users"),
         ("ctrl+t", "minimize", "Minimize"),
         ("ctrl+r", "toggle_ad_mode", "Chat/Ads"),
+        ("ctrl+g", "emoji", "Emoji"),
     ]
 
 

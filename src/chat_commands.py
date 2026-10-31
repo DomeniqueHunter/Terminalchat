@@ -57,6 +57,7 @@ COMMAND_INFO = [
     ("reconnect", "", "reconnect to the chat server now"),
     ("logout", "", "log out and forget password"),
     ("minimize", "", "detach, keep running in background"),
+    ("emoji", "[search]", "pick an emoji and insert it into the input (ctrl+g)"),
     ("chatstatus", "", "show the partner's status or the channel description"),
     ("help", "", "show all commands"),
     ("shortcuts", "", "show all key bindings"),
@@ -88,6 +89,7 @@ SHORTCUT_INFO = [
     ("tab", "complete a command or character name"),
     ("ctrl+tab", "previous name match"),
     ("ctrl+r", "switch input between Chat and Ads"),
+    ("ctrl+g", "emoji picker, inserts at the cursor"),
     ("ctrl+o", "open the channel list"),
     ("ctrl+l", "leave / close the current chat"),
     ("ctrl+f", "show/hide friends and channel users"),
@@ -154,6 +156,7 @@ class ChatCommands:
             "minimize": self.cmd_minimize,
             "detach": self.cmd_minimize,
             "chatstatus": self.cmd_chatstatus,
+            "emoji": self.cmd_emoji,
             "help": self.cmd_help,
             "shortcuts": self.cmd_shortcuts,
             "keys": self.cmd_shortcuts,
@@ -477,6 +480,9 @@ class ChatCommands:
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()
+
+    async def cmd_emoji(self, args:str) -> None:
+        self.app.action_emoji(args.strip())
 
     async def cmd_reconnect(self, args:str) -> None:
         if self.app.online:

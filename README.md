@@ -132,6 +132,7 @@ Type commands into the input line.
 | `/reconnect` | Reconnect to the chat server now (see *Connection loss*) |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
+| `/emoji [search]` | Open the emoji picker (also `ctrl+g`); the chosen emoji is inserted into the input at the cursor, not sent |
 | `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
 | `/help` | Show the command list (closes with `esc`) |
 | `/shortcuts` | Show all key bindings (alias: `/keys`, closes with `esc`) |
@@ -181,6 +182,7 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+f` | Show or hide the sidebar (friends / channel users) |
 | `ctrl+t` | Minimize: detach and keep running in the background (needs the launcher) |
 | `ctrl+r` | Switch the input between *Chat* and *Ads* (channels only) |
+| `ctrl+g` | Emoji picker: type to search (e.g. `heart`, `cat`, `laugh`), `enter` inserts the emoji at the cursor |
 | `enter` | Send the message |
 | `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
 | `up` / `down` | Move between lines; on the first / last line browse previously sent input |

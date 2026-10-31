@@ -26,6 +26,7 @@ from eicons import EiconCache
 from panels.channels_list_panel import ChannelsList
 from panels.character_panel import CharacterScreen
 from panels.login_panel import Credentials, LoginScreen
+from panels.emoji_panel import EmojiScreen
 from panels.sidebar import Sidebar
 from presence import FRIENDS
 from sanitize import is_safe_url
@@ -529,6 +530,16 @@ class ChatApp(App):
             self.chat_input.set_text(self.client.ad_drafts.get(chat.key))
             self.update_input_mode()
         self.chat_input.focus()
+
+    def action_emoji(self, query:str="") -> None:
+        if not isinstance(self.screen, EmojiScreen):
+            self.push_screen(EmojiScreen(query), self.insert_emoji)
+
+    def insert_emoji(self, emoji:str | None) -> None:
+        box = self.chat_input
+        if emoji:
+            box.insert(emoji)
+        box.focus()
 
     def action_toggle_ad_mode(self) -> None:
         self.set_input_mode("chat" if self.input_mode == "ads" else "ads")
