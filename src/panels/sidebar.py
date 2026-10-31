@@ -36,7 +36,7 @@ class Sidebar(Vertical):
         padding: 0;
         height: 1fr;
     }
-    Sidebar OptionList {
+    Sidebar OptionList, Sidebar OptionList:focus {
         height: 1fr;
         border: none;
         padding: 0;
