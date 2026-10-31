@@ -17,7 +17,7 @@ from textual.widgets._header import HeaderTitle
 
 from animated_eicon import make_eicon_widget
 from bbcode import to_text
-from chat_commands import COMMAND_ALIASES, COMMAND_INFO, command_usage, matching_commands
+from chat_commands import COMMAND_ALIASES, COMMAND_INFO, NAME_COMMANDS, command_usage, matching_commands
 from chat_store import render_line, split_line
 from color_config import EICON_STYLE, NameStyle, make_style
 from eicons import MAX_PER_MESSAGE, EiconCache, extract_eicons
@@ -128,6 +128,7 @@ class ChatInput(TextArea):
         Binding("tab", "complete", show=False),
         Binding("ctrl+tab,shift+tab", "complete_back", show=False),
         Binding("shift+enter,ctrl+enter,ctrl+j,alt+enter", "newline", show=False),
+        Binding("ctrl+c", "copy_or_clear", show=False),
     ]
 
     class Submitted(Message):
@@ -172,6 +173,14 @@ class ChatInput(TextArea):
     def action_newline(self) -> None:
         start, end = self.selection
         self.replace("\n", start, end)
+
+    def action_copy_or_clear(self) -> None:
+        if self.selected_text:
+            self.action_copy()
+            return
+        self.clear()
+        self.history_position = None
+        self.name_completion = None
 
     def remember(self, text:str) -> None:
         if text and (not self.sent_history or self.sent_history[-1] != text):
@@ -223,6 +232,12 @@ class ChatInput(TextArea):
         else:
             self.complete_name(-1)
 
+    def in_name_command(self) -> bool:
+        if not self.text.startswith("/"):
+            return False
+        command = re.split(r"\s", self.text[1:], maxsplit=1)[0].lower()
+        return COMMAND_ALIASES.get(command, command) in NAME_COMMANDS
+
     def find_names(self, before:str) -> tuple[int, list[str]] | None:
         if self.name_source is None:
             return None
@@ -248,7 +263,7 @@ class ChatInput(TextArea):
             start, names = found
             state = NameCompletion(row, start, names, 0 if step > 0 else len(names) - 1, "", (row, column))
         name = state.names[state.index]
-        insert = name if self.text.startswith("/") else f"[user]{name}[/user]"
+        insert = name if self.in_name_command() else f"[user]{name}[/user]"
         result = self.replace(insert, (state.row, state.start), state.location)
         self.move_cursor(result.end_location)
         state.text = self.text

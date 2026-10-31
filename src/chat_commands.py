@@ -66,6 +66,7 @@ COMMAND_INFO = [
 
 COMMAND_NAMES = [name for name, _, _ in COMMAND_INFO]
 
+NAME_COMMANDS = {"priv", "invite", "kick", "ban", "unban", "timeout", "op", "deop", "setowner"}
 COMMAND_ALIASES = {"close": "leave", "create": "makeroom", "detach": "minimize", "keys": "shortcuts"}
 
 
@@ -87,6 +88,8 @@ SHORTCUT_INFO = [
     ("ctrl+j / alt+enter", "new line (works everywhere)"),
     ("up / down", "move between lines, then browse sent input"),
     ("tab", "complete a command or character name"),
+    ("ctrl+c", "clear the input (copy if text is selected)"),
+    ("ctrl+z / ctrl+y", "undo / redo in the input"),
     ("ctrl+tab", "previous name match"),
     ("ctrl+r", "switch input between Chat and Ads"),
     ("ctrl+g", "emoji picker, inserts at the cursor"),
