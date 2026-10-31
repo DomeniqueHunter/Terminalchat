@@ -202,6 +202,7 @@ In the chat list on the left, the console (`>`) is at the top, followed by chann
 
 Messages are sent as you type them; BBCode is rendered when messages are shown. Supported: `b`, `i`, `u`, `s`, `color`, `big`, `small`, `sub`, `sup`, `heading`, `user`, `icon`, `eicon`, `url`, `session`, `channel`, `spoiler`, `quote`, `noparse`, `hr`. Alignment and layout tags (`center`, `indent`, `collapse`, ...) are removed, their text is kept. Unknown tags are shown as text.
 
+- Eicons and avatars are shown inside the text line (`text [eicon]x[/eicon] text`), with the text vertically centered. If the text before the last image is too long for that (more than about 60 characters including time and name), or a line contains only images (eicon grids), the images are shown in their own row below the text instead.
 - Click a character name (`[user]`) to open a private chat.
 - `[icon]` shows the character's avatar as an image (like eicons); click it to open the f-list profile in the browser, or to copy the profile link when running over SSH. With `"eicons": "off"` it is shown as `[Name]` linking to the profile.
 - Click a channel link (`[session]`, `[channel]`) to join the channel.

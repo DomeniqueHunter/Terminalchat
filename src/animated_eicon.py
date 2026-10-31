@@ -2,6 +2,7 @@ from typing import Any
 
 from PIL import Image as PILImage
 from textual.app import ComposeResult
+from textual.css.scalar import Unit
 from textual.geometry import Region
 from textual.strip import Strip
 from textual_image.renderable import Image as AutoRenderable
@@ -16,6 +17,12 @@ IDLE_SECONDS = 0.5
 
 
 class FrameAnimation:
+
+    def _get_styled_dimension(self, styles:Any, dimension:str) -> Any:
+        style = getattr(styles, dimension)
+        if style is not None and style.unit == Unit.CELLS:
+            return int(style.value)
+        return super()._get_styled_dimension(styles, dimension)
 
     def setup_animation(self, eicon:Eicon) -> None:
         self.frames = eicon.frames

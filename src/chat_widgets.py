@@ -12,6 +12,7 @@ from textual.css.query import NoMatches
 from textual.dom import NoScreen
 from textual.events import Click, Key
 from textual.message import Message
+from textual.widget import Widget
 from textual.widgets import Header, Static, TextArea
 from textual.widgets._header import HeaderTitle
 
@@ -21,7 +22,11 @@ from bbcode_area import BBCodeArea
 from chat_commands import COMMAND_ALIASES, COMMAND_INFO, NAME_COMMANDS, command_usage, matching_commands
 from chat_store import join_header, render_line, split_line
 from color_config import EICON_STYLE, ICON_STYLE, NameStyle, make_style
-from eicons import AVATAR, MAX_PER_MESSAGE, EiconCache, extract_images, profile_url
+from eicons import AVATAR, IMAGE_PATTERN, MAX_PER_MESSAGE, EiconCache, extract_images, profile_url
+
+
+INLINE_MARKER = "\ue000"
+INLINE_TEXT_LIMIT = 60
 
 
 class ChatLine(Vertical):
@@ -41,6 +46,21 @@ class ChatLine(Vertical):
         width: auto;
         margin-right: 1;
     }
+    ChatLine > .inline {
+        height: auto;
+        width: 1fr;
+    }
+    ChatLine > .inline > Static {
+        width: auto;
+        content-align-vertical: middle;
+    }
+    ChatLine > .inline > .rest {
+        width: 1fr;
+    }
+    ChatLine .slot {
+        width: 0;
+        height: 0;
+    }
     """
 
     def __init__(self, line:str, eicons:EiconCache | None=None, eicon_height:int=4,
@@ -50,7 +70,7 @@ class ChatLine(Vertical):
         self.line = line
         self.eicons = eicons
         self.eicon_height = eicon_height
-        self.rows: list[tuple[Horizontal, list[tuple[str, str]]]] = []
+        self.rows: list[tuple[Widget, list[tuple[str, str]]]] = []
         self.reveal_spoilers = False
 
     def compose(self) -> ComposeResult:
@@ -61,18 +81,55 @@ class ChatLine(Vertical):
         header, message = split_line(self.line, self.name_style)
         remaining = MAX_PER_MESSAGE
         for index, part in enumerate(message.split("\n")):
+            line_header = header if index == 0 else Text()
+            images = extract_images(part)
+            pieces = self.inline_pieces(part, line_header, images) if len(images) <= remaining else None
+            if pieces is not None:
+                remaining -= len(images)
+                yield self.inline_row(pieces, images)
+                continue
+
             text = to_text(part, False, self.name_style, self.reveal_spoilers)
             if index == 0:
                 yield Static(join_header(header, text))
             elif text.plain.strip():
                 yield Static(text)
 
-            images = extract_images(part)[:remaining]
+            images = images[:remaining]
             remaining -= len(images)
             if images:
                 row = Horizontal(classes="eicons")
                 self.rows.append((row, images))
                 yield row
+
+    def inline_pieces(self, part:str, header:Text, images:list[tuple[str, str]]) -> list[Text] | None:
+        if not images or "[noparse]" in part.lower():
+            return None
+        marked = IMAGE_PATTERN.sub(INLINE_MARKER, part)
+        pieces = to_text(marked, False, self.name_style, self.reveal_spoilers).split(INLINE_MARKER, allow_blank=True)
+        if len(pieces) != len(images) + 1 or any("\n" in piece.plain for piece in pieces):
+            return None
+        if not any(piece.plain.strip() for piece in pieces):
+            return None
+        if len(header.plain) + sum(len(piece.plain) for piece in pieces[:-1]) > INLINE_TEXT_LIMIT:
+            return None
+        pieces[0] = Text.assemble(header, pieces[0])
+        return pieces
+
+    def inline_row(self, pieces:list[Text], images:list[tuple[str, str]]) -> Horizontal:
+        children = []
+        for piece in pieces[:-1]:
+            if piece.plain:
+                text = Static(piece)
+                text.styles.height = self.eicon_height
+                children.append(text)
+            children.append(Static("", classes="slot"))
+        rest = Static(pieces[-1], classes="rest")
+        rest.styles.min_height = self.eicon_height
+        children.append(rest)
+        row = Horizontal(*children, classes="inline")
+        self.rows.append((row, images))
+        return row
 
     async def on_click(self, event:Click) -> None:
         link = event.style.link
@@ -97,7 +154,7 @@ class ChatLine(Vertical):
         for row, images in self.rows:
             self.run_worker(self.load_row(row, images))
 
-    async def load_row(self, row:Horizontal, images:list[tuple[str, str]]) -> None:
+    async def load_row(self, row:Widget, images:list[tuple[str, str]]) -> None:
         widgets = []
         for kind, name in images:
             image = await self.eicons.get(name, kind)
@@ -116,7 +173,13 @@ class ChatLine(Vertical):
 
         view = self.parent if isinstance(self.parent, VerticalScroll) else None
         at_end = view is not None and view.scroll_y >= view.max_scroll_y - 1
-        await row.mount_all(widgets)
+        if row.has_class("inline"):
+            slots = list(row.query(".slot"))
+            for widget, slot in zip(widgets, slots):
+                await row.mount(widget, before=slot)
+            await row.remove_children(slots)
+        else:
+            await row.mount_all(widgets)
         if at_end:
             view.call_after_refresh(view.scroll_end, animate=False)
 
