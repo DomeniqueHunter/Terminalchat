@@ -20,8 +20,8 @@ from bbcode import SPOILER_LINK, to_text
 from bbcode_area import BBCodeArea
 from chat_commands import COMMAND_ALIASES, COMMAND_INFO, NAME_COMMANDS, command_usage, matching_commands
 from chat_store import join_header, render_line, split_line
-from color_config import EICON_STYLE, NameStyle, make_style
-from eicons import MAX_PER_MESSAGE, EiconCache, extract_eicons
+from color_config import EICON_STYLE, ICON_STYLE, NameStyle, make_style
+from eicons import AVATAR, MAX_PER_MESSAGE, EiconCache, extract_images, profile_url
 
 
 class ChatLine(Vertical):
@@ -50,11 +50,11 @@ class ChatLine(Vertical):
         self.line = line
         self.eicons = eicons
         self.eicon_height = eicon_height
-        self.rows: list[tuple[Horizontal, list[str]]] = []
+        self.rows: list[tuple[Horizontal, list[tuple[str, str]]]] = []
         self.reveal_spoilers = False
 
     def compose(self) -> ComposeResult:
-        if self.eicons is None or not extract_eicons(self.line):
+        if self.eicons is None or not extract_images(self.line):
             yield Static(render_line(self.line, self.eicons is None, self.name_style, self.reveal_spoilers))
             return
 
@@ -67,15 +67,19 @@ class ChatLine(Vertical):
             elif text.plain.strip():
                 yield Static(text)
 
-            names = extract_eicons(part)[:remaining]
-            remaining -= len(names)
-            if names:
+            images = extract_images(part)[:remaining]
+            remaining -= len(images)
+            if images:
                 row = Horizontal(classes="eicons")
-                self.rows.append((row, names))
+                self.rows.append((row, images))
                 yield row
 
     async def on_click(self, event:Click) -> None:
         link = event.style.link
+        widget = event.widget
+        while not link and widget is not None and widget is not self:
+            link = getattr(widget, "link", None)
+            widget = widget.parent
         if not link:
             return
         event.stop()
@@ -90,18 +94,24 @@ class ChatLine(Vertical):
             open_link(link)
 
     def on_mount(self) -> None:
-        for row, names in self.rows:
-            self.run_worker(self.load_row(row, names))
+        for row, images in self.rows:
+            self.run_worker(self.load_row(row, images))
 
-    async def load_row(self, row:Horizontal, names:list[str]) -> None:
+    async def load_row(self, row:Horizontal, images:list[tuple[str, str]]) -> None:
         widgets = []
-        for name in names:
-            eicon = await self.eicons.get(name)
-            if eicon is None:
-                widgets.append(Static(Text(f":{name}:", make_style(EICON_STYLE)), classes="missing"))
-                continue
-            widget = make_eicon_widget(eicon)
-            widget.styles.height = self.eicon_height
+        for kind, name in images:
+            image = await self.eicons.get(name, kind)
+            link = profile_url(name) if kind == AVATAR else None
+            if image is None:
+                label = f"[{name}]" if kind == AVATAR else f":{name}:"
+                style = make_style(ICON_STYLE if kind == AVATAR else EICON_STYLE)
+                widget = Static(Text(label, style), classes="missing")
+            else:
+                widget = make_eicon_widget(image)
+                widget.styles.height = self.eicon_height
+            if link:
+                widget.link = link
+                widget.tooltip = f"{name} - click to open the profile"
             widgets.append(widget)
 
         view = self.parent if isinstance(self.parent, VerticalScroll) else None

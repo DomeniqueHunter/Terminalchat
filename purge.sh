@@ -24,18 +24,18 @@ Usage: ./purge.sh [options] [components]
 
 Deletes what terminalchat stored outside the program folder. Without
 components everything is deleted: configuration (including the stored
-password), chat logs and other data, and the eicon cache.
+password), chat logs and other data, and the eicon and avatar cache.
 
 Components (only the given ones are deleted):
   --config        configuration and stored password
   --data          all data: chat logs, pins, status, ad texts, genders
   --logs          only chat logs and debug.log, keep pins, status etc.
-  --eicons        eicon cache
+  --eicons        eicon and avatar cache
 
 Options:
   --keep-config   keep the configuration
   --keep-data     keep chat logs and data
-  --keep-cache    keep the eicon cache
+  --keep-cache    keep the eicon and avatar cache
   --venv          also delete ./venv (run ./setup.sh to recreate it)
   -n, --dry-run   only show what would be deleted
   -y, --yes       do not ask for confirmation
@@ -44,7 +44,7 @@ Options:
 Examples:
   ./purge.sh               delete everything after confirmation
   ./purge.sh -n --logs     show which logs would be deleted
-  ./purge.sh -y --eicons   clear the eicon cache without asking
+  ./purge.sh -y --eicons   clear the image cache without asking
 EOF
 }
 

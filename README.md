@@ -202,7 +202,8 @@ In the chat list on the left, the console (`>`) is at the top, followed by chann
 
 Messages are sent as you type them; BBCode is rendered when messages are shown. Supported: `b`, `i`, `u`, `s`, `color`, `big`, `small`, `sub`, `sup`, `heading`, `user`, `icon`, `eicon`, `url`, `session`, `channel`, `spoiler`, `quote`, `noparse`, `hr`. Alignment and layout tags (`center`, `indent`, `collapse`, ...) are removed, their text is kept. Unknown tags are shown as text.
 
-- Click a character name (`[user]`, `[icon]`) to open a private chat.
+- Click a character name (`[user]`) to open a private chat.
+- `[icon]` shows the character's avatar as an image (like eicons); click it to open the f-list profile in the browser, or to copy the profile link when running over SSH. With `"eicons": "off"` it is shown as `[Name]` linking to the profile.
 - Click a channel link (`[session]`, `[channel]`) to join the channel.
 - Spoilers are hidden behind a ` spoiler ` label; click it to reveal the message's spoilers.
 - Quotes are shown as an indented block with `│` and the author if given (`[quote=Name]`).
@@ -252,7 +253,7 @@ The client follows the XDG base directory specification and respects `XDG_CONFIG
 |---|---|---|
 | Configuration | `~/.config/terminalchat/config.json` | `TERMINALCHAT_CONFIG` |
 | Data (logs, pins, status, ...) | `~/.local/share/terminalchat/` | `TERMINALCHAT_DATA`, then `data_dir` in the config |
-| Cache (eicons) | `~/.cache/terminalchat/` | `XDG_CACHE_HOME` |
+| Cache (eicons, avatars) | `~/.cache/terminalchat/` | `XDG_CACHE_HOME` |
 
 The console shows the paths in use on every start. When you change `data_dir`, existing data is not moved; move the folder yourself.
 
@@ -277,6 +278,7 @@ Paths below `<data>` refer to the data directory (default `~/.local/share/termin
 | `<data>/chats/genders.json` | Known genders of other characters, used for name colors |
 | `<data>/debug.log` | Debug output |
 | `~/.cache/terminalchat/eicons/` | Eicon cache |
+| `~/.cache/terminalchat/avatars/` | Avatar cache for `[icon]` |
 | `tmux.conf` | Settings for the launcher's tmux server |
 
 Older single-file logs (`chat.log`, `console.log`) are split into daily files automatically the first time a chat is opened; the original is kept as `chat.log.bak` / `console.log.bak` and can be deleted afterwards.
@@ -298,7 +300,7 @@ Components (when given, only these are deleted; they can be combined):
 | `--config` | Configuration and stored password |
 | `--data` | All data: chat logs, pins, status, ad texts, genders |
 | `--logs` | Only chat logs (including `.bak` files) and `debug.log`; pins, status, ad texts etc. are kept |
-| `--eicons` | Eicon cache |
+| `--eicons` | Eicon and avatar cache |
 
 Options:
 

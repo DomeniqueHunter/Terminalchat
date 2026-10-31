@@ -5,7 +5,7 @@ from rich.text import Text
 
 from color_config import (BBCODE_COLORS, CHANNEL_LINK_STYLE, EICON_STYLE, ICON_STYLE, QUOTE_STYLE, RULE_STYLE,
                           SPOILER_STYLE, URL_STYLE, USER_STYLE, NameStyle, make_style, no_name_style)
-from eicons import eicon_url
+from eicons import eicon_url, profile_url
 
 
 TAG_PATTERN = re.compile(r"\[(/?)([a-zA-Z]+)(?:=([^\]]*))?\]")
@@ -65,7 +65,9 @@ def render_content_tag(text:Text, name:str, value:str | None, content:str, base:
     if name == "user":
         text.append(content, base + make_style(USER_STYLE) + name_style(content) + Style(link=USER_LINK + content.strip()))
     elif name == "icon":
-        text.append(f"[{content}]", base + make_style(ICON_STYLE) + name_style(content) + Style(link=USER_LINK + content.strip()))
+        if not show_eicons:
+            return
+        text.append(f"[{content}]", base + make_style(ICON_STYLE) + name_style(content) + Style(link=profile_url(content)))
     elif name == "eicon":
         if not show_eicons:
             return
