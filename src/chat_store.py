@@ -166,13 +166,14 @@ def format_line(sender:str, message:str) -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     message = html.unescape(message).replace("\r\n", "\n").replace("\r", "\n").strip()
     if message.startswith("/me "):
-        return f"[{timestamp}] * {sender} {message[4:]}"
+        return f"[{timestamp}] {EMOTE_PREFIX}{sender}: {message[4:]}"
     if message.startswith("/me's "):
-        return f"[{timestamp}] * {sender}'s {message[6:]}"
+        return f"[{timestamp}] {EMOTE_PREFIX}{sender}: 's {message[6:]}"
     return f"[{timestamp}] {sender}: {message}"
 
 
 AD_PREFIX = "[AD] "
+EMOTE_PREFIX = "* "
 
 
 def is_ad_line(line:str) -> bool:
@@ -186,7 +187,14 @@ def split_line(line:str, name_style:NameStyle | None=None) -> tuple[Text, str]:
     if not match:
         return Text(), line
     timestamp, sender, message = match.groups()
-    return Text.assemble(f"{timestamp} ", (sender, make_style(SENDER_STYLE) + name_style(sender)), ": "), message
+    style = make_style(SENDER_STYLE)
+    prefix, separator = "", ": "
+    if sender.startswith(EMOTE_PREFIX):
+        prefix, sender = EMOTE_PREFIX, sender[len(EMOTE_PREFIX):]
+        separator = "" if message.startswith("'s ") else " "
+    elif sender.startswith(AD_PREFIX):
+        prefix, sender = AD_PREFIX, sender[len(AD_PREFIX):]
+    return Text.assemble(f"{timestamp} ", (prefix, style), (sender, style + name_style(sender)), separator), message
 
 
 def render_line(line:str, show_eicons:bool=True, name_style:NameStyle | None=None) -> Text:
@@ -195,7 +203,9 @@ def render_line(line:str, show_eicons:bool=True, name_style:NameStyle | None=Non
 
 
 def main() -> None:
-    print(render_line(format_line("Tester", "Hallo [b]Welt[/b] &amp; so")))
+    for message in ("Hallo [b]Welt[/b] &amp; so", "/me winkt: hallo", "/me's Hut fällt"):
+        line = format_line("Max Mustermann", message)
+        print(line, "->", render_line(line).plain)
 
 
 if __name__ == "__main__":

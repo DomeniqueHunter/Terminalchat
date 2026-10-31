@@ -8,18 +8,29 @@ TMUX_SOCKET="terminalchat"
 ASSUME_YES=0
 DRY_RUN=0
 REMOVE_VENV=0
-KEEP_CONFIG=0
-KEEP_DATA=0
-KEEP_CACHE=0
+SELECTED=0
+DO_CONFIG=1
+DO_DATA=1
+DO_LOGS=0
+DO_CACHE=1
 
 TARGETS=()
+LOG_FILES=()
+LOG_DIRS=()
 
 usage() {
     cat <<EOF
-Usage: ./purge.sh [options]
+Usage: ./purge.sh [options] [components]
 
-Deletes the configuration (including the stored password), chat logs and
-other data, and the eicon cache of terminalchat. The program itself stays.
+Deletes what terminalchat stored outside the program folder. Without
+components everything is deleted: configuration (including the stored
+password), chat logs and other data, and the eicon cache.
+
+Components (only the given ones are deleted):
+  --config        configuration and stored password
+  --data          all data: chat logs, pins, status, ad texts, genders
+  --logs          only chat logs and debug.log, keep pins, status etc.
+  --eicons        eicon cache
 
 Options:
   --keep-config   keep the configuration
@@ -29,6 +40,11 @@ Options:
   -n, --dry-run   only show what would be deleted
   -y, --yes       do not ask for confirmation
   -h, --help      show this help
+
+Examples:
+  ./purge.sh               delete everything after confirmation
+  ./purge.sh -n --logs     show which logs would be deleted
+  ./purge.sh -y --eicons   clear the eicon cache without asking
 EOF
 }
 
@@ -41,12 +57,32 @@ fail() {
     exit 1
 }
 
+select_component() {
+    if [[ ${SELECTED} -eq 0 ]]; then
+        SELECTED=1
+        DO_CONFIG=0
+        DO_DATA=0
+        DO_LOGS=0
+        DO_CACHE=0
+    fi
+    case "$1" in
+        config) DO_CONFIG=1 ;;
+        data) DO_DATA=1 ;;
+        logs) DO_LOGS=1 ;;
+        eicons) DO_CACHE=1 ;;
+    esac
+}
+
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --keep-config) KEEP_CONFIG=1 ;;
-            --keep-data) KEEP_DATA=1 ;;
-            --keep-cache) KEEP_CACHE=1 ;;
+            --config) select_component config ;;
+            --data) select_component data ;;
+            --logs) select_component logs ;;
+            --eicons|--cache) select_component eicons ;;
+            --keep-config) DO_CONFIG=0 ;;
+            --keep-data) DO_DATA=0 ;;
+            --keep-cache) DO_CACHE=0 ;;
             --venv) REMOVE_VENV=1 ;;
             -n|--dry-run) DRY_RUN=1 ;;
             -y|--yes) ASSUME_YES=1 ;;
@@ -55,6 +91,8 @@ parse_args() {
         esac
         shift
     done
+    [[ ${DO_DATA} -eq 1 ]] && DO_LOGS=0
+    return 0
 }
 
 expand_home() {
@@ -96,6 +134,15 @@ configured_data_dir() {
     python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("data_dir") or "")' "${file}" 2>/dev/null || true
 }
 
+data_dir() {
+    local custom="$1"
+    if [[ -n "${TERMINALCHAT_DATA:-}" || -n "${custom}" ]]; then
+        expand_home "${TERMINALCHAT_DATA:-${custom}}"
+    else
+        printf '%s\n' "${XDG_DATA_HOME:-${HOME}/.local/share}/${APP_NAME}"
+    fi
+}
+
 collect_config() {
     local file="$1"
     if [[ -n "${TERMINALCHAT_CONFIG:-}" ]]; then
@@ -110,22 +157,62 @@ collect_config() {
 collect_data() {
     local custom="$1"
     local dir
+    dir="$(data_dir "${custom}")"
     if [[ -n "${TERMINALCHAT_DATA:-}" || -n "${custom}" ]]; then
-        dir="$(expand_home "${TERMINALCHAT_DATA:-${custom}}")"
         add_target "${dir}/chats"
         add_target "${dir}/debug.log"
     else
-        add_target "${XDG_DATA_HOME:-${HOME}/.local/share}/${APP_NAME}"
+        add_target "${dir}"
     fi
     add_target "${BASE_DIR}/src/chats"
+    collect_legacy_logs
+}
+
+collect_legacy_logs() {
     local log
     for log in "${BASE_DIR}"/src/*.log; do
         add_target "${log}"
     done
 }
 
+collect_logs() {
+    local custom="$1"
+    local dir chats file
+    dir="$(data_dir "${custom}")"
+    add_target "${dir}/debug.log"
+    collect_legacy_logs
+    for chats in "${dir}/chats" "${BASE_DIR}/src/chats"; do
+        [[ -d "${chats}" ]] || continue
+        is_safe_path "${chats}" || fail "refusing to delete unsafe path: ${chats}"
+        LOG_DIRS+=("${chats}")
+        while IFS= read -r -d '' file; do
+            LOG_FILES+=("${file}")
+        done < <(find "${chats}" -type f \( -name '*.log' -o -name '*.log.bak' \) -print0)
+    done
+}
+
 collect_cache() {
     add_target "${XDG_CACHE_HOME:-${HOME}/.cache}/${APP_NAME}"
+}
+
+show_targets() {
+    local target chats count size
+    for target in "${TARGETS[@]}"; do
+        printf '  %s  (%s)\n' "${target}" "$(du -sh "${target}" 2>/dev/null | cut -f1)"
+    done
+    [[ ${#LOG_FILES[@]} -gt 0 ]] || return 0
+    for chats in "${LOG_DIRS[@]}"; do
+        count=0
+        size=0
+        for target in "${LOG_FILES[@]}"; do
+            if [[ "${target}" == "${chats}/"* ]]; then
+                count=$((count + 1))
+                size=$((size + $(stat -c %s "${target}")))
+            fi
+        done
+        [[ ${count} -gt 0 ]] || continue
+        printf '  %s: %d chat log files  (%s)\n' "${chats}" "${count}" "$(numfmt --to=iec --suffix=B "${size}")"
+    done
 }
 
 stop_running_client() {
@@ -150,6 +237,23 @@ confirm() {
     [[ "${answer}" =~ ^[yYjJ] ]]
 }
 
+delete_all() {
+    local custom="$1"
+    local target chats
+    for target in "${TARGETS[@]}"; do
+        rm -rf -- "${target}"
+    done
+    if [[ ${#LOG_FILES[@]} -gt 0 ]]; then
+        rm -f -- "${LOG_FILES[@]}"
+        for chats in "${LOG_DIRS[@]}"; do
+            find "${chats}" -mindepth 1 -type d -empty -delete
+        done
+    fi
+    if [[ ${DO_DATA} -eq 1 && -n "${TERMINALCHAT_DATA:-}${custom}" ]]; then
+        rmdir -- "$(data_dir "${custom}")" 2>/dev/null || true
+    fi
+}
+
 main() {
     parse_args "$@"
 
@@ -158,22 +262,19 @@ main() {
     custom="$(configured_data_dir "${file}")"
     [[ -z "${custom}" ]] && custom="$(configured_data_dir "${BASE_DIR}/src/config.json")"
 
-    [[ ${KEEP_CONFIG} -eq 1 ]] || collect_config "${file}"
-    [[ ${KEEP_DATA} -eq 1 ]] || collect_data "${custom}"
-    [[ ${KEEP_CACHE} -eq 1 ]] || collect_cache
+    [[ ${DO_CONFIG} -eq 1 ]] && collect_config "${file}"
+    [[ ${DO_DATA} -eq 1 ]] && collect_data "${custom}"
+    [[ ${DO_LOGS} -eq 1 ]] && collect_logs "${custom}"
+    [[ ${DO_CACHE} -eq 1 ]] && collect_cache
     [[ ${REMOVE_VENV} -eq 1 ]] && add_target "${BASE_DIR}/venv"
 
-    if [[ ${#TARGETS[@]} -eq 0 ]]; then
+    if [[ ${#TARGETS[@]} -eq 0 && ${#LOG_FILES[@]} -eq 0 ]]; then
         info "Nothing to delete"
         exit 0
     fi
 
     info "The following will be deleted:"
-    local target
-    for target in "${TARGETS[@]}"; do
-        printf '  %s  (%s)\n' "${target}" "$(du -sh "${target}" 2>/dev/null | cut -f1)"
-    done
-
+    show_targets
     stop_running_client
 
     if [[ ${DRY_RUN} -eq 1 ]]; then
@@ -182,12 +283,7 @@ main() {
     fi
     confirm || { echo "Aborted"; exit 1; }
 
-    for target in "${TARGETS[@]}"; do
-        rm -rf -- "${target}"
-    done
-    if [[ -n "${TERMINALCHAT_DATA:-}${custom}" ]]; then
-        rmdir -- "$(expand_home "${TERMINALCHAT_DATA:-${custom}}")" 2>/dev/null || true
-    fi
+    delete_all "${custom}"
     info "Done"
 }
 

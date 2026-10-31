@@ -258,20 +258,30 @@ Paths below `<data>` refer to the data directory (default `~/.local/share/termin
 
 Older single-file logs (`chat.log`, `console.log`) are split into daily files automatically the first time a chat is opened; the original is kept as `chat.log.bak` / `console.log.bak` and can be deleted afterwards.
 
-## Removing all data
+## Removing data
 
-`purge.sh` deletes everything terminalchat stored outside the program folder: the configuration (including the stored password), chat logs and other data, and the eicon cache. It respects `TERMINALCHAT_CONFIG`, `TERMINALCHAT_DATA`, `data_dir` and the XDG variables, and also removes leftovers from older versions in `src/`. If the client is still running in the background, it offers to stop it first.
+`purge.sh` deletes what terminalchat stored outside the program folder. Without components it deletes everything: the configuration (including the stored password), chat logs and other data, and the eicon cache. It respects `TERMINALCHAT_CONFIG`, `TERMINALCHAT_DATA`, `data_dir` and the XDG variables, and also removes leftovers from older versions in `src/`. If the client is still running in the background, it offers to stop it first. It always lists what it is going to delete and asks for confirmation unless `-y` is given.
 
 ```bash
-./purge.sh -n      # only show what would be deleted
-./purge.sh         # delete after confirmation
+./purge.sh               # delete everything after confirmation
+./purge.sh -n --logs     # only show which logs would be deleted
+./purge.sh -y --eicons   # clear the eicon cache without asking
 ```
+
+Components (when given, only these are deleted; they can be combined):
+
+| Component | Deletes |
+|---|---|
+| `--config` | Configuration and stored password |
+| `--data` | All data: chat logs, pins, status, ad texts, genders |
+| `--logs` | Only chat logs (including `.bak` files) and `debug.log`; pins, status, ad texts etc. are kept |
+| `--eicons` | Eicon cache |
+
+Options:
 
 | Option | Description |
 |---|---|
-| `--keep-config` | Keep the configuration |
-| `--keep-data` | Keep chat logs and data |
-| `--keep-cache` | Keep the eicon cache |
+| `--keep-config` / `--keep-data` / `--keep-cache` | Keep this part when deleting everything |
 | `--venv` | Also delete `venv/` (recreate it with `./setup.sh`) |
 | `-n`, `--dry-run` | Only show what would be deleted |
 | `-y`, `--yes` | Do not ask for confirmation |
