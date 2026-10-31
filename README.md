@@ -132,6 +132,7 @@ Type commands into the input line.
 | `/reconnect` | Reconnect to the chat server now (see *Connection loss*) |
 | `/logout` | Disconnect, forget the stored password and show the login screen |
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
+| `/bbcode [search]` | List all BBCode tags with a preview and insert one into the input (also `ctrl+b`); selected text is wrapped, otherwise the cursor is placed inside the tags |
 | `/emoji [search]` | Open the emoji picker (also `ctrl+g`); the chosen emoji is inserted into the input at the cursor, not sent |
 | `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
 | `/help` | Show the command list (closes with `esc`) |
@@ -184,6 +185,7 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+r` | Switch the input between *Chat* and *Ads* (channels only) |
 | `alt+b` / `alt+i` / `alt+u` / `alt+s` | Bold / italic / underline / strike: wraps the selected text in BBCode tags, or inserts an empty pair with the cursor in between |
 | `alt+p` / `alt+q` | Spoiler / quote, same as above |
+| `ctrl+b` | BBCode picker: search, preview and insert a tag (wraps selected text) |
 | `ctrl+g` | Emoji picker: type to search (e.g. `heart`, `cat`, `laugh`), `enter` inserts the emoji at the cursor |
 | `enter` | Send the message |
 | `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |

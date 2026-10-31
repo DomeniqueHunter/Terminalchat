@@ -26,6 +26,7 @@ from eicons import EiconCache
 from panels.channels_list_panel import ChannelsList
 from panels.character_panel import CharacterScreen
 from panels.login_panel import Credentials, LoginScreen
+from panels.bbcode_panel import BBCodeScreen
 from panels.emoji_panel import EmojiScreen
 from panels.sidebar import Sidebar
 from presence import FRIENDS
@@ -541,6 +542,16 @@ class ChatApp(App):
     def action_emoji(self, query:str="") -> None:
         if not isinstance(self.screen, EmojiScreen):
             self.push_screen(EmojiScreen(query), self.insert_emoji)
+
+    def action_bbcode(self, query:str="") -> None:
+        if not isinstance(self.screen, BBCodeScreen):
+            self.push_screen(BBCodeScreen(query), self.insert_bbcode)
+
+    def insert_bbcode(self, template:str | None) -> None:
+        box = self.chat_input
+        if template:
+            box.insert_template(template)
+        box.focus()
 
     def insert_emoji(self, emoji:str | None) -> None:
         box = self.chat_input

@@ -1,3 +1,5 @@
+from textual.binding import Binding
+
 
 APP_BINDINGS = [
         ("ctrl+o", "open_channels_list", "Channels"),
@@ -6,6 +8,7 @@ APP_BINDINGS = [
         ("ctrl+t", "minimize", "Minimize"),
         ("ctrl+r", "toggle_ad_mode", "Chat/Ads"),
         ("ctrl+g", "emoji", "Emoji"),
+        Binding("ctrl+b", "bbcode", "BBCode", show=False),
     ]
 
 

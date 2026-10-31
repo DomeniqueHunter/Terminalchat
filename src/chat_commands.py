@@ -57,6 +57,7 @@ COMMAND_INFO = [
     ("reconnect", "", "reconnect to the chat server now"),
     ("logout", "", "log out and forget password"),
     ("minimize", "", "detach, keep running in background"),
+    ("bbcode", "[search]", "list BBCode tags and insert one into the input (ctrl+b)"),
     ("emoji", "[search]", "pick an emoji and insert it into the input (ctrl+g)"),
     ("chatstatus", "", "show the partner's status or the channel description"),
     ("help", "", "show all commands"),
@@ -93,6 +94,7 @@ SHORTCUT_INFO = [
     ("ctrl+tab", "previous name match"),
     ("ctrl+r", "switch input between Chat and Ads"),
     ("ctrl+g", "emoji picker, inserts at the cursor"),
+    ("ctrl+b", "BBCode picker, wraps selected text"),
     ("alt+b / i / u / s", "bold / italic / underline / strike (wraps selection)"),
     ("alt+p / alt+q", "spoiler / quote (wraps selection)"),
     ("click name / #channel", "open private chat / join channel"),
@@ -164,6 +166,7 @@ class ChatCommands:
             "detach": self.cmd_minimize,
             "chatstatus": self.cmd_chatstatus,
             "emoji": self.cmd_emoji,
+            "bbcode": self.cmd_bbcode,
             "help": self.cmd_help,
             "shortcuts": self.cmd_shortcuts,
             "keys": self.cmd_shortcuts,
@@ -487,6 +490,9 @@ class ChatCommands:
 
     async def cmd_channels(self, args:str) -> None:
         self.app.action_open_channels_list()
+
+    async def cmd_bbcode(self, args:str) -> None:
+        self.app.action_bbcode(args.strip())
 
     async def cmd_emoji(self, args:str) -> None:
         self.app.action_emoji(args.strip())
