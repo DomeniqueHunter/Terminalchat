@@ -623,7 +623,8 @@ class ChatApp(App):
         if chat.kind == CONSOLE:
             self.notify("The console is read-only, use /commands here", severity="warning")
             return
-        await self.client.send(chat, text)
+        if not await self.client.send(chat, text):
+            self.chat_input.set_text(text)
 
 
 def build_app() -> ChatApp:

@@ -159,15 +159,19 @@ class Client:
             self.app.notify("Not connected, nothing was sent", severity="warning")
         return self.app.online
 
-    async def send(self, chat:Chat, message:str) -> None:
+    async def send(self, chat:Chat, message:str) -> bool:
         if not self.check_online():
-            return
+            return False
+        if chat.kind == USER and self.find_online(chat.key) is None:
+            self.app.notify(f"{chat.title} is offline, message not sent", severity="warning")
+            return False
         if chat.kind == CHANNEL:
             await self.comm.message(opcode.CHANNEL_MESSAGE, {"channel": chat.key, "message": message})
         else:
             await self.comm.message(opcode.PRIVATE_MESSAGE, {"recipient": chat.key, "message": message})
         line = self.store.append(chat, self.character, message)
         await self.app.show_line(chat.id, line)
+        return True
 
     async def on_joined(self, code:str, title:str) -> None:
         self.joining.discard(code)

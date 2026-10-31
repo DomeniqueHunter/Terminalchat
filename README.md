@@ -219,7 +219,7 @@ The sidebar on the right has two tabs: *Friends* lists your friends that are onl
 
 When the connection to the chat server is lost, the client reconnects automatically. It waits 5, 15, 30, 60 and 120 seconds between the first attempts, then tries every 5 minutes; the title bar shows the countdown. `/reconnect` tries immediately. After reconnecting, all open channels are joined again and your status is restored; private chats simply stay open.
 
-While disconnected, messages are not sent: the input keeps your text and a warning is shown.
+While disconnected, messages are not sent: the input keeps your text and a warning is shown. The same happens in a private chat when the other character is offline; such messages are not written to the log either.
 
 There is no automatic reconnect after the server disconnected you because you logged in elsewhere with the same character or because you are banned (errors 31 and 9), so two clients do not keep kicking each other out. Use `/reconnect` in that case. If the login itself is rejected (e.g. the password changed), the login screen is shown.
 
