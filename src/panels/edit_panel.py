@@ -7,9 +7,10 @@ from textual.screen import ModalScreen
 from textual.widgets import Static, TextArea
 
 from bbcode import to_text
+from bbcode_area import BBCodeArea
 
 
-class SingleLineArea(TextArea):
+class SingleLineArea(BBCodeArea):
 
     BINDINGS = [
         Binding("shift+enter,ctrl+enter,ctrl+j,alt+enter", "newline", show=False),
@@ -91,7 +92,7 @@ class EditScreen(ModalScreen[str | None]):
         length = len(text.strip())
         self.query_one("#edit_counter", Static).update(
             Text(f"{length} / {self.max_length}", "bold red" if length > self.max_length else ""))
-        preview = to_text(text.strip(), False) if text.strip() else Text("(no status message)", "dim")
+        preview = to_text(text.strip(), False, reveal_spoilers=True) if text.strip() else Text("(no status message)", "dim")
         self.query_one("#edit_preview", Static).update(preview)
 
     def action_save(self) -> None:

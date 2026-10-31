@@ -93,6 +93,10 @@ SHORTCUT_INFO = [
     ("ctrl+tab", "previous name match"),
     ("ctrl+r", "switch input between Chat and Ads"),
     ("ctrl+g", "emoji picker, inserts at the cursor"),
+    ("alt+b / i / u / s", "bold / italic / underline / strike (wraps selection)"),
+    ("alt+p / alt+q", "spoiler / quote (wraps selection)"),
+    ("click name / #channel", "open private chat / join channel"),
+    ("click spoiler", "reveal it"),
     ("ctrl+o", "open the channel list"),
     ("ctrl+l", "leave / close the current chat"),
     ("ctrl+f", "show/hide friends and channel users"),
@@ -508,7 +512,7 @@ class ChatCommands:
                 text.append(f"  ·  {len(members)} users", "dim")
             description = self.client.descriptions.get(chat.key, "")
             text.append("\n\n")
-            text.append_text(to_text(description, False) if description.strip() else Text("(no description)", "dim"))
+            text.append_text(to_text(description, False, reveal_spoilers=True) if description.strip() else Text("(no description)", "dim"))
             self.app.push_screen(InfoScreen("Channel description", text, wide=True))
             return
         text.append(title, self.app.name_style(chat.key) + Style(bold=True))
@@ -519,7 +523,7 @@ class ChatCommands:
             status, message = state
             text.append(f"\n{status}", make_style(STATUS_STYLES.get(status, "")))
             text.append("\n\n")
-            text.append_text(to_text(message, False) if message.strip() else Text("(no status message)", "dim"))
+            text.append_text(to_text(message, False, reveal_spoilers=True) if message.strip() else Text("(no status message)", "dim"))
         self.app.push_screen(InfoScreen("Status", text, wide=len(text.plain) > 60))
 
     async def cmd_help(self, args:str) -> None:

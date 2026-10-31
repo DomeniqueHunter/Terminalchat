@@ -6,7 +6,7 @@ from pathlib import Path
 
 from rich.text import Text
 
-from bbcode import to_text
+from bbcode import QUOTE_BAR, to_text
 from color_config import SENDER_STYLE, NameStyle, make_style, no_name_style
 from sanitize import clean_text, safe_path_part
 
@@ -197,9 +197,14 @@ def split_line(line:str, name_style:NameStyle | None=None) -> tuple[Text, str]:
     return Text.assemble(f"{timestamp} ", (prefix, style), (sender, style + name_style(sender)), separator), message
 
 
-def render_line(line:str, show_eicons:bool=True, name_style:NameStyle | None=None) -> Text:
+def join_header(header:Text, message:Text) -> Text:
+    separator = "\n" if header.plain and message.plain.startswith(QUOTE_BAR) else ""
+    return Text.assemble(header, separator, message)
+
+
+def render_line(line:str, show_eicons:bool=True, name_style:NameStyle | None=None, reveal_spoilers:bool=False) -> Text:
     header, message = split_line(line, name_style)
-    return Text.assemble(header, to_text(message, show_eicons, name_style))
+    return join_header(header, to_text(message, show_eicons, name_style, reveal_spoilers))
 
 
 def main() -> None:

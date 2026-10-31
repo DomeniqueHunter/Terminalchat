@@ -63,7 +63,11 @@ class InfoScreen(ModalScreen[None]):
         self.dismiss(None)
 
     def on_click(self, event) -> None:
-        if event.widget is self:
+        link = event.style.link
+        if link:
+            self.dismiss(None)
+            self.app.open_link(link)
+        elif event.widget is self:
             self.dismiss(None)
 
 

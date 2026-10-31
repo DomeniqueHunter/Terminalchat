@@ -15,6 +15,7 @@ SPOILER_STYLE = "reverse"
 OP_STYLE = "bold"
 CHANNEL_LINK_STYLE = "bold #5fafff"
 RULE_STYLE = "dim"
+QUOTE_STYLE = "dim"
 
 STATUS_SYMBOLS = {
     "looking": "+",

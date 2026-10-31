@@ -182,6 +182,8 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+f` | Show or hide the sidebar (friends / channel users) |
 | `ctrl+t` | Minimize: detach and keep running in the background (needs the launcher) |
 | `ctrl+r` | Switch the input between *Chat* and *Ads* (channels only) |
+| `alt+b` / `alt+i` / `alt+u` / `alt+s` | Bold / italic / underline / strike: wraps the selected text in BBCode tags, or inserts an empty pair with the cursor in between |
+| `alt+p` / `alt+q` | Spoiler / quote, same as above |
 | `ctrl+g` | Emoji picker: type to search (e.g. `heart`, `cat`, `laugh`), `enter` inserts the emoji at the cursor |
 | `enter` | Send the message |
 | `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
@@ -195,6 +197,15 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 The title bar shows your status and character (`Terminal Chat — looking — as <character>`). Click it to expand it and show your status message below; click again to collapse it.
 
 In the chat list on the left, the console (`>`) is at the top, followed by channels (`#`) and private chats (`@`). A `*` marks unread messages, a `+` marks pinned chats.
+
+### BBCode
+
+Messages are sent as you type them; BBCode is rendered when messages are shown. Supported: `b`, `i`, `u`, `s`, `color`, `big`, `small`, `sub`, `sup`, `heading`, `user`, `icon`, `eicon`, `url`, `session`, `channel`, `spoiler`, `quote`, `noparse`, `hr`. Alignment and layout tags (`center`, `indent`, `collapse`, ...) are removed, their text is kept. Unknown tags are shown as text.
+
+- Click a character name (`[user]`, `[icon]`) to open a private chat.
+- Click a channel link (`[session]`, `[channel]`) to join the channel.
+- Spoilers are hidden behind a ` spoiler ` label; click it to reveal the message's spoilers.
+- Quotes are shown as an indented block with `│` and the author if given (`[quote=Name]`).
 
 Click a link to open it in your browser. When the client runs over SSH or without a graphical session, the link is copied to the clipboard instead (OSC 52; needs a terminal that supports it, e.g. Konsole, kitty, WezTerm) and shown as a notification.
 

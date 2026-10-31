@@ -16,9 +16,10 @@ from textual.widgets import Header, Static, TextArea
 from textual.widgets._header import HeaderTitle
 
 from animated_eicon import make_eicon_widget
-from bbcode import to_text
+from bbcode import SPOILER_LINK, to_text
+from bbcode_area import BBCodeArea
 from chat_commands import COMMAND_ALIASES, COMMAND_INFO, NAME_COMMANDS, command_usage, matching_commands
-from chat_store import render_line, split_line
+from chat_store import join_header, render_line, split_line
 from color_config import EICON_STYLE, NameStyle, make_style
 from eicons import MAX_PER_MESSAGE, EiconCache, extract_eicons
 
@@ -50,18 +51,19 @@ class ChatLine(Vertical):
         self.eicons = eicons
         self.eicon_height = eicon_height
         self.rows: list[tuple[Horizontal, list[str]]] = []
+        self.reveal_spoilers = False
 
     def compose(self) -> ComposeResult:
         if self.eicons is None or not extract_eicons(self.line):
-            yield Static(render_line(self.line, self.eicons is None, self.name_style))
+            yield Static(render_line(self.line, self.eicons is None, self.name_style, self.reveal_spoilers))
             return
 
         header, message = split_line(self.line, self.name_style)
         remaining = MAX_PER_MESSAGE
         for index, part in enumerate(message.split("\n")):
-            text = to_text(part, False, self.name_style)
+            text = to_text(part, False, self.name_style, self.reveal_spoilers)
             if index == 0:
-                yield Static(Text.assemble(header, text))
+                yield Static(join_header(header, text))
             elif text.plain.strip():
                 yield Static(text)
 
@@ -72,11 +74,19 @@ class ChatLine(Vertical):
                 self.rows.append((row, names))
                 yield row
 
-    def on_click(self, event:Click) -> None:
+    async def on_click(self, event:Click) -> None:
         link = event.style.link
+        if not link:
+            return
+        event.stop()
+        if link == SPOILER_LINK:
+            self.reveal_spoilers = True
+            self.rows = []
+            await self.recompose()
+            self.on_mount()
+            return
         open_link = getattr(self.app, "open_link", None)
-        if link and open_link is not None:
-            event.stop()
+        if open_link is not None:
             open_link(link)
 
     def on_mount(self) -> None:
@@ -114,7 +124,7 @@ class NameCompletion:
     location: tuple[int, int]
 
 
-class ChatInput(TextArea):
+class ChatInput(BBCodeArea):
 
     DEFAULT_CSS = """
     ChatInput {

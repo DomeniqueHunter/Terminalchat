@@ -29,6 +29,7 @@ from panels.login_panel import Credentials, LoginScreen
 from panels.emoji_panel import EmojiScreen
 from panels.sidebar import Sidebar
 from presence import FRIENDS
+from bbcode import CHANNEL_LINK, USER_LINK
 from sanitize import is_safe_url
 from terminal_config import APP_BINDINGS, APP_CSS
 
@@ -166,6 +167,12 @@ class ChatApp(App):
         self.show_login()
 
     def open_link(self, url:str) -> None:
+        if url.startswith(USER_LINK):
+            self.run_worker(self.client.open_private(url[len(USER_LINK):]))
+            return
+        if url.startswith(CHANNEL_LINK):
+            self.run_worker(self.client.join(url[len(CHANNEL_LINK):]))
+            return
         if not is_safe_url(url):
             self.notify(f"Not opening link, only http and https are allowed: {url}", severity="warning", timeout=10)
             return
