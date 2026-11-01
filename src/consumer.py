@@ -133,8 +133,7 @@ class Consumer:
         name = data["identity"]
         self.client.set_online(name, data.get("status", "online"))
         self.client.genders.set(name, data.get("gender"))
-        if self.is_friend(name):
-            await self.client.log_console(f"[user]{name}[/user] is online")
+        await self.client.on_presence_notice(name, "is online", self.is_friend(name))
 
     async def on_friends(self, data:dict) -> None:
         self.client.presence.set_friends(data.get("characters", []))
@@ -164,8 +163,7 @@ class Consumer:
         name = data["character"]
         friend = self.is_friend(name)
         self.client.set_offline(name)
-        if friend:
-            await self.client.log_console(f"[user]{name}[/user] went offline")
+        await self.client.on_presence_notice(name, "went offline", friend)
 
     async def on_variable(self, data:dict) -> None:
         if "variable" in data:

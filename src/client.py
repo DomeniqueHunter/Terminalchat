@@ -233,6 +233,14 @@ class Client:
         line = self.store.append(chat, "System", message)
         await self.app.show_line(chat.id, line)
 
+    async def on_presence_notice(self, name:str, text:str, friend:bool) -> None:
+        chat = self.store.find_user(name)
+        if chat is not None:
+            line = self.store.append(chat, "System", f"[user]{name}[/user] {text}")
+            await self.app.show_line(chat.id, line, mark_unread=False)
+        if chat is not None or friend:
+            await self.log_console(f"[user]{name}[/user] {text}")
+
     async def on_private_message(self, sender:str, message:str) -> None:
         chat = self.store.get_or_create(sender, USER)
         line = self.store.append(chat, sender, message)

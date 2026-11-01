@@ -189,7 +189,7 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+g` | Emoji picker: type to search (e.g. `heart`, `cat`, `laugh`), `enter` inserts the emoji at the cursor |
 | `enter` | Send the message |
 | `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
-| `up` / `down` | Move between lines; on the first / last line browse previously sent input |
+| `up` / `down` | Move between lines; on the first / last line browse previously sent input of the current chat (each chat has its own history while the client runs) |
 | `ctrl+c` | Clear the input (`ctrl+z` brings the text back); with selected text it copies instead |
 | `tab` / `ctrl+tab` | Complete a command, or complete a character name (press again to cycle forward / backward) |
 | `ctrl+p` | Command palette |
@@ -213,7 +213,7 @@ Messages are sent as you type them; BBCode is rendered when messages are shown. 
 
 Click a link to open it in your browser. When the client runs over SSH or without a graphical session, the link is copied to the clipboard instead (OSC 52; needs a terminal that supports it, e.g. Konsole, kitty, WezTerm) and shown as a notification.
 
-The console collects global events: connection, server messages and errors, broadcasts, site events, invitations and friends going online or offline. It is read-only and cannot be closed. Channel related events (kicks, bans, timeouts, operator changes, channel notices) are shown in the affected channel instead.
+The console collects global events: connection, server messages and errors, broadcasts, site events, invitations, and friends or characters you have a private chat open with going online or offline. In an open private chat, the partner going offline or coming back online is also shown as a system line (without marking the chat as unread). It is read-only and cannot be closed. Channel related events (kicks, bans, timeouts, operator changes, channel notices) are shown in the affected channel instead.
 
 The sidebar on the right has two tabs: *Friends* lists your friends that are online, *Channel* lists the users of the open channel (channel operators first, marked with `@`). It switches to the matching tab when you change chats. Press `enter` on a name to open a private chat. Status symbols: `+` looking, `•` online, `~` idle/away, `-` busy, `x` do not disturb.
 

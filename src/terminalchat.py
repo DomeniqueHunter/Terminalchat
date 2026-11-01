@@ -426,6 +426,7 @@ class ChatApp(App):
             else:
                 self.leave_ad_mode()
         self.active_chat = chat_id
+        self.chat_input.use_history(chat_id)
         chat.unread = False
         self.sidebar_dirty.add("view")
         if self.sidebar.display:
@@ -442,16 +443,16 @@ class ChatApp(App):
         self.update_input_mode()
         await self.rebuild_list()
 
-    async def show_line(self, chat_id:str, line:str) -> None:
+    async def show_line(self, chat_id:str, line:str, mark_unread:bool=True) -> None:
         if chat_id == self.active_chat:
             await self.chat_view.query(".placeholder").remove()
             await self.chat_view.mount(self.chat_line(line))
             self.chat_view.scroll_end(animate=False)
             return
         chat = self.client.store.get(chat_id)
-        if chat is not None:
+        if chat is not None and mark_unread:
             chat.unread = True
-        await self.rebuild_list()
+            await self.rebuild_list()
 
     async def chat_removed(self, chat_id:str) -> None:
         if chat_id != self.active_chat:

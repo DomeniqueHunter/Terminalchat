@@ -228,7 +228,8 @@ class ChatInput(BBCodeArea):
     def __init__(self, *, placeholder:str="", id:str | None=None, max_history:int=100) -> None:
         super().__init__(id=id, soft_wrap=True, show_line_numbers=False, placeholder=placeholder)
         self.max_history = max_history
-        self.sent_history: list[str] = []
+        self.histories: dict[str, list[str]] = {}
+        self.history_key = ""
         self.history_position: int | None = None
         self.draft = ""
         self.history_enabled = True
@@ -264,6 +265,17 @@ class ChatInput(BBCodeArea):
         self.clear()
         self.history_position = None
         self.name_completion = None
+
+    @property
+    def sent_history(self) -> list[str]:
+        return self.histories.setdefault(self.history_key, [])
+
+    def use_history(self, key:str) -> None:
+        if key == self.history_key:
+            return
+        self.history_key = key
+        self.history_position = None
+        self.draft = ""
 
     def remember(self, text:str) -> None:
         if text and (not self.sent_history or self.sent_history[-1] != text):
