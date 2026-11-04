@@ -12,7 +12,7 @@ from textual.css.query import NoMatches
 from textual.dom import NoScreen
 from textual.events import Click, Key
 from textual.message import Message
-from textual.widget import Widget
+from textual.widget import MountError, Widget
 from textual.widgets import Header, Static, TextArea
 from textual.widgets._header import HeaderTitle
 
@@ -171,16 +171,21 @@ class ChatLine(Vertical):
                 widget.tooltip = f"{name} - click to open the profile"
             widgets.append(widget)
 
+        if not row.is_attached or not self.is_attached:
+            return
         view = self.parent if isinstance(self.parent, VerticalScroll) else None
         at_end = view is not None and view.scroll_y >= view.max_scroll_y - 1
-        if row.has_class("inline"):
-            slots = list(row.query(".slot"))
-            for widget, slot in zip(widgets, slots):
-                await row.mount(widget, before=slot)
-            await row.remove_children(slots)
-        else:
-            await row.mount_all(widgets)
-        if at_end:
+        try:
+            if row.has_class("inline"):
+                slots = list(row.query(".slot"))
+                for widget, slot in zip(widgets, slots):
+                    await row.mount(widget, before=slot)
+                await row.remove_children(slots)
+            else:
+                await row.mount_all(widgets)
+        except MountError:
+            return
+        if at_end and view.is_attached:
             view.call_after_refresh(view.scroll_end, animate=False)
 
 

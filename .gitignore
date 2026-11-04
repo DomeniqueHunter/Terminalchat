@@ -1,5 +1,4 @@
-__pycache__
-venv
 config.json
 *.log
 chats/
+__pycache__/

@@ -58,6 +58,7 @@ class ChatApp(App):
         self.startup_notes: list[str] = []
         self.sidebar_dirty: set[str] = {FRIENDS}
         self.list_lock = asyncio.Lock()
+        self.view_lock = asyncio.Lock()
         self.eicons = None
         if config.get("eicons", "inline") == "inline":
             self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
@@ -433,21 +434,26 @@ class ChatApp(App):
             self.sidebar.show_tab("tab_channel" if chat.kind == CHANNEL else "tab_friends")
             self.refresh_sidebar()
 
-        await self.chat_view.remove_children()
-        lines = self.client.store.history(chat)
-        if chat.kind == CHANNEL and not self.client.ads.visible(chat.key):
-            lines = [line for line in lines if not is_ad_line(line)]
-        widgets = [self.chat_line(line) for line in lines] or [Static("No messages yet", classes="placeholder")]
-        await self.chat_view.mount_all(widgets)
-        self.chat_view.scroll_end(animate=False)
+        async with self.view_lock:
+            if self.active_chat != chat_id:
+                return
+            await self.chat_view.remove_children()
+            lines = self.client.store.history(chat)
+            if chat.kind == CHANNEL and not self.client.ads.visible(chat.key):
+                lines = [line for line in lines if not is_ad_line(line)]
+            widgets = [self.chat_line(line) for line in lines] or [Static("No messages yet", classes="placeholder")]
+            await self.chat_view.mount_all(widgets)
+            self.chat_view.scroll_end(animate=False)
         self.update_input_mode()
         await self.rebuild_list()
 
     async def show_line(self, chat_id:str, line:str, mark_unread:bool=True) -> None:
         if chat_id == self.active_chat:
-            await self.chat_view.query(".placeholder").remove()
-            await self.chat_view.mount(self.chat_line(line))
-            self.chat_view.scroll_end(animate=False)
+            async with self.view_lock:
+                if chat_id == self.active_chat:
+                    await self.chat_view.query(".placeholder").remove()
+                    await self.chat_view.mount(self.chat_line(line))
+                    self.chat_view.scroll_end(animate=False)
             return
         chat = self.client.store.get(chat_id)
         if chat is not None and mark_unread:
