@@ -217,6 +217,9 @@ class ChatInput(BBCodeArea):
         Binding("ctrl+tab,shift+tab", "complete_back", show=False),
         Binding("shift+enter,ctrl+enter,ctrl+j,alt+enter", "newline", show=False),
         Binding("ctrl+c", "copy_or_clear", show=False),
+        Binding("ctrl+a", "app.toggle_ad_mode", "Chat/Ads"),
+        Binding("ctrl+e", "app.emoji", "Emoji"),
+        Binding("ctrl+h", "app.help", "Help"),
     ]
 
     class Submitted(Message):

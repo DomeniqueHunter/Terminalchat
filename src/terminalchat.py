@@ -44,11 +44,12 @@ INPUT_BAR_REFRESH_SECONDS = 1.0
 RECONNECT_DELAYS = (5, 15, 30, 60, 120, 300)
 TICKET_MAX_AGE = 25 * 60
 NO_RECONNECT_ERRORS = {9, 31}
-CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+r: ads)"
+CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+a: ads)"
 
 
 class ChatApp(App):
     BINDINGS = APP_BINDINGS
+    COMMAND_PALETTE_BINDING = "f1"
     CSS = APP_CSS
     TITLE = "Terminal Chat"
 
@@ -289,6 +290,12 @@ class ChatApp(App):
         if result.error:
             raise ProfileError(result.error)
         return self.ticket
+
+    async def action_help(self) -> None:
+        await self.client.commands.cmd_help("")
+
+    async def action_profile(self) -> None:
+        await self.client.commands.cmd_profile("")
 
     def show_profile(self, name:str) -> None:
         if not isinstance(self.screen, ProfileScreen):
@@ -606,7 +613,7 @@ class ChatApp(App):
         if self.input_mode == "ads":
             chat = self.current_chat()
             title = html.unescape(chat.title) if chat else self.ad_channel
-            box.placeholder = f"Ad for {title} - enter posts it, the text stays  (ctrl+r: chat)"
+            box.placeholder = f"Ad for {title} - enter posts it, the text stays  (ctrl+a: chat)"
         else:
             box.placeholder = CHAT_PLACEHOLDER
         self.refresh_input_bar()

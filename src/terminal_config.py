@@ -6,9 +6,11 @@ APP_BINDINGS = [
         ("ctrl+l", "close_chat", "Close chat"),
         ("ctrl+f", "toggle_sidebar", "Users"),
         ("ctrl+t", "minimize", "Minimize"),
-        ("ctrl+r", "toggle_ad_mode", "Chat/Ads"),
-        ("ctrl+g", "emoji", "Emoji"),
+        ("ctrl+a", "toggle_ad_mode", "Chat/Ads"),
+        ("ctrl+e", "emoji", "Emoji"),
+        ("ctrl+h", "help", "Help"),
         Binding("ctrl+b", "bbcode", "BBCode", show=False),
+        ("ctrl+p", "profile", "Profile"),
     ]
 
 

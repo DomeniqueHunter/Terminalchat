@@ -133,7 +133,7 @@ Type commands into the input line.
 | `/logout` | Disconnect, forget the stored password and show the login screen |
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/bbcode [search]` | List all BBCode tags with a preview and insert one into the input (also `ctrl+b`); selected text is wrapped, otherwise the cursor is placed inside the tags |
-| `/emoji [search]` | Open the emoji picker (also `ctrl+g`); the chosen emoji is inserted into the input at the cursor, not sent |
+| `/emoji [search]` | Open the emoji picker (also `ctrl+e`); the chosen emoji is inserted into the input at the cursor, not sent |
 | `/profile [name]` | Show a character's f-list profile in a window (alias: `/profil`): avatar, title, status, details, description and kinks in tabs. Without a name in a private chat it shows the partner. `o` opens the profile in the browser |
 | `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
 | `/help` | Show the command list (closes with `esc`) |
@@ -142,7 +142,7 @@ Type commands into the input line.
 
 ### Chat and ads input
 
-Above the input field a bar shows the length of your text and the server limit (`12 / 4096`); it turns red when the text is too long. In channels it also shows two buttons, *Chat* and *Ads*. Click them or press `ctrl+r` to switch.
+Above the input field a bar shows the length of your text and the server limit (`12 / 4096`); it turns red when the text is too long. In channels it also shows two buttons, *Chat* and *Ads*. Click them or press `ctrl+a` to switch.
 
 In *Ads* mode the input holds a separate ad text for each channel. `enter` posts it as role play ad and the text stays, so you can post it again later or edit it. The bar shows how long you have to wait until the next ad is allowed. Ad texts are saved and survive restarts. Your chat text is kept while you are in *Ads* mode and comes back when you switch to *Chat*. Commands starting with `/` still work in *Ads* mode. Opening a private chat or the console switches back to *Chat*.
 
@@ -183,17 +183,20 @@ Kicks, bans and timeouts announced by the server appear as system lines in the c
 | `ctrl+l` | Leave / close the current chat |
 | `ctrl+f` | Show or hide the sidebar (friends / channel users) |
 | `ctrl+t` | Minimize: detach and keep running in the background (needs the launcher) |
-| `ctrl+r` | Switch the input between *Chat* and *Ads* (channels only) |
+| `ctrl+a` | Switch the input between *Chat* and *Ads* (channels only) |
 | `alt+b` / `alt+i` / `alt+u` / `alt+s` | Bold / italic / underline / strike: wraps the selected text in BBCode tags, or inserts an empty pair with the cursor in between |
 | `alt+p` / `alt+q` | Spoiler / quote, same as above |
 | `ctrl+b` | BBCode picker: search, preview and insert a tag (wraps selected text) |
-| `ctrl+g` | Emoji picker: type to search (e.g. `heart`, `cat`, `laugh`), `enter` inserts the emoji at the cursor |
+| `ctrl+e` | Emoji picker: type to search (e.g. `heart`, `cat`, `laugh`), `enter` inserts the emoji at the cursor |
 | `enter` | Send the message |
 | `shift+enter` / `ctrl+enter` / `ctrl+j` / `alt+enter` | New line in the message (multi-line messages, e.g. eicon grids). `shift+enter` and `ctrl+enter` only work in terminals that report it separately (e.g. kitty, WezTerm, foot); `ctrl+j` works everywhere |
+| `home` / `end` | Start / end of the line in the input (`ctrl+a` / `ctrl+e` are used for ads and emojis) |
 | `up` / `down` | Move between lines; on the first / last line browse previously sent input of the current chat (each chat has its own history while the client runs) |
 | `ctrl+c` | Clear the input (`ctrl+z` brings the text back); with selected text it copies instead |
 | `tab` / `ctrl+tab` | Complete a command, or complete a character name (press again to cycle forward / backward) |
-| `ctrl+p` | Command palette |
+| `ctrl+h` | Command list (`/help`); only in terminals that report `ctrl+h` separately from backspace (kitty keyboard protocol, e.g. kitty, WezTerm, foot, Ghostty), elsewhere use `/help` |
+| `ctrl+p` | Profile of the private chat partner (see `/profile`) |
+| `f1` | Command palette |
 | `ctrl+q` | Quit |
 | `escape` | Close a dialog |
 
