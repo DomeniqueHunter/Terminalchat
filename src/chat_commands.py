@@ -8,7 +8,7 @@ from rich.style import Style
 from rich.text import Text
 
 from bbcode import to_text
-from chat_store import CHANNEL, CONSOLE
+from chat_store import CHANNEL, CONSOLE, USER
 from color_config import STATUS_STYLES, make_style
 from fchat import Opcode as opcode
 from own_status import MAX_MESSAGE_LENGTH, VALID_STATUSES
@@ -59,6 +59,7 @@ COMMAND_INFO = [
     ("minimize", "", "detach, keep running in background"),
     ("bbcode", "[search]", "list BBCode tags and insert one into the input (ctrl+b)"),
     ("emoji", "[search]", "pick an emoji and insert it into the input (ctrl+g)"),
+    ("profile", "[name]", "show the profile of the chat partner or of a character"),
     ("chatstatus", "", "show the partner's status or the channel description"),
     ("help", "", "show all commands"),
     ("shortcuts", "", "show all key bindings"),
@@ -67,8 +68,8 @@ COMMAND_INFO = [
 
 COMMAND_NAMES = [name for name, _, _ in COMMAND_INFO]
 
-NAME_COMMANDS = {"priv", "invite", "kick", "ban", "unban", "timeout", "op", "deop", "setowner"}
-COMMAND_ALIASES = {"close": "leave", "create": "makeroom", "detach": "minimize", "keys": "shortcuts"}
+NAME_COMMANDS = {"priv", "profile", "profil", "invite", "kick", "ban", "unban", "timeout", "op", "deop", "setowner"}
+COMMAND_ALIASES = {"profil": "profile", "close": "leave", "create": "makeroom", "detach": "minimize", "keys": "shortcuts"}
 
 
 def command_usage(name:str, args:str) -> str:
@@ -165,6 +166,8 @@ class ChatCommands:
             "minimize": self.cmd_minimize,
             "detach": self.cmd_minimize,
             "chatstatus": self.cmd_chatstatus,
+            "profile": self.cmd_profile,
+            "profil": self.cmd_profile,
             "emoji": self.cmd_emoji,
             "bbcode": self.cmd_bbcode,
             "help": self.cmd_help,
@@ -502,6 +505,16 @@ class ChatCommands:
             self.app.notify("Already connected")
             return
         self.app.schedule_reconnect(immediate=True)
+
+    async def cmd_profile(self, args:str) -> None:
+        name = unquote(args)
+        if not name:
+            chat = self.app.current_chat()
+            if chat is None or chat.kind != USER:
+                self.app.notify("Usage: /profile <name> (without a name in a private chat)", severity="warning")
+                return
+            name = chat.key
+        self.app.show_profile(self.client.find_online(name) or name)
 
     async def cmd_chatstatus(self, args:str) -> None:
         chat = self.app.current_chat()

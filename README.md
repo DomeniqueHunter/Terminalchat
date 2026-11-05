@@ -134,6 +134,7 @@ Type commands into the input line.
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/bbcode [search]` | List all BBCode tags with a preview and insert one into the input (also `ctrl+b`); selected text is wrapped, otherwise the cursor is placed inside the tags |
 | `/emoji [search]` | Open the emoji picker (also `ctrl+g`); the chosen emoji is inserted into the input at the cursor, not sent |
+| `/profile [name]` | Show a character's f-list profile in a window (alias: `/profil`): avatar, title, status, details, description and kinks in tabs. Without a name in a private chat it shows the partner. `o` opens the profile in the browser |
 | `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
 | `/help` | Show the command list (closes with `esc`) |
 | `/shortcuts` | Show all key bindings (alias: `/keys`, closes with `esc`) |
@@ -281,7 +282,8 @@ Paths below `<data>` refer to the data directory (default `~/.local/share/termin
 | `<data>/chats/genders.json` | Known genders of other characters, used for name colors |
 | `<data>/debug.log` | Debug output |
 | `~/.cache/terminalchat/eicons/` | Eicon cache |
-| `~/.cache/terminalchat/avatars/` | Avatar cache for `[icon]` |
+| `~/.cache/terminalchat/avatars/` | Avatar cache for `[icon]` and profiles |
+| `~/.cache/terminalchat/mapping-list.json` | Names of profile fields and kinks from f-list, refreshed weekly |
 | `tmux.conf` | Settings for the launcher's tmux server |
 
 Older single-file logs (`chat.log`, `console.log`) are split into daily files automatically the first time a chat is opened; the original is kept as `chat.log.bak` / `console.log.bak` and can be deleted afterwards.

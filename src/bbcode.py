@@ -22,7 +22,7 @@ SIMPLE_STYLES = {
     "heading": Style(bold=True, underline=True),
 }
 
-PASSTHROUGH_TAGS = {"center", "left", "right", "justify", "indent", "collapse"}
+PASSTHROUGH_TAGS = {"center", "left", "right", "justify", "indent", "collapse", "img"}
 VOID_TAGS = {"hr"}
 CONTENT_TAGS = {"user", "icon", "eicon", "url", "noparse", "session", "channel", "spoiler", "quote"}
 RULE = "\u2500" * 24

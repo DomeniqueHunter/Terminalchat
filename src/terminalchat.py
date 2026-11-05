@@ -22,12 +22,14 @@ from color_config import gender_style
 import paths
 from chat_log import set_log_dir
 from config import Config
-from eicons import EiconCache
+from eicons import EiconCache, default_cache_dir
 from panels.channels_list_panel import ChannelsList
 from panels.character_panel import CharacterScreen
 from panels.login_panel import Credentials, LoginScreen
 from panels.bbcode_panel import BBCodeScreen
 from panels.emoji_panel import EmojiScreen
+from panels.profile_panel import ProfileScreen
+from profile_api import ProfileApi, ProfileError
 from panels.sidebar import Sidebar
 from presence import FRIENDS
 from bbcode import CHANNEL_LINK, USER_LINK
@@ -40,6 +42,7 @@ SIDEBAR_REFRESH_SECONDS = 1.0
 GENDER_SAVE_SECONDS = 30
 INPUT_BAR_REFRESH_SECONDS = 1.0
 RECONNECT_DELAYS = (5, 15, 30, 60, 120, 300)
+TICKET_MAX_AGE = 25 * 60
 NO_RECONNECT_ERRORS = {9, 31}
 CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+r: ads)"
 
@@ -59,6 +62,9 @@ class ChatApp(App):
         self.sidebar_dirty: set[str] = {FRIENDS}
         self.list_lock = asyncio.Lock()
         self.view_lock = asyncio.Lock()
+        self.ticket = ""
+        self.ticket_time = 0.0
+        self.profile_api: ProfileApi | None = None
         self.eicons = None
         if config.get("eicons", "inline") == "inline":
             self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
@@ -162,6 +168,8 @@ class ChatApp(App):
 
     async def logout(self) -> None:
         await self.shutdown_client()
+        self.ticket = ""
+        self.profile_api = None
         self.config["password"] = ""
         self.config.save()
         await self.reset_view()
@@ -227,7 +235,7 @@ class ChatApp(App):
 
     async def start_backend(self) -> None:
         self.sub_title = "logging in..."
-        result = await login.fetch_ticket(str(self.config.get("account")), str(self.config.get("password")))
+        result = await self.fetch_ticket()
         if result.error:
             self.sub_title = "offline"
             self.show_login(result.error)
@@ -266,6 +274,26 @@ class ChatApp(App):
         if not defaults and first and self.active_chat is None:
             await self.open_chat(first)
 
+    async def fetch_ticket(self) -> login.LoginResult:
+        result = await login.fetch_ticket(str(self.config.get("account")), str(self.config.get("password")))
+        if not result.error:
+            self.ticket = result.ticket
+            self.ticket_time = asyncio.get_running_loop().time()
+            self.profile_api = ProfileApi(str(self.config.get("account")), self.api_ticket, default_cache_dir())
+        return result
+
+    async def api_ticket(self) -> str:
+        if self.ticket and asyncio.get_running_loop().time() - self.ticket_time < TICKET_MAX_AGE:
+            return self.ticket
+        result = await self.fetch_ticket()
+        if result.error:
+            raise ProfileError(result.error)
+        return self.ticket
+
+    def show_profile(self, name:str) -> None:
+        if not isinstance(self.screen, ProfileScreen):
+            self.push_screen(ProfileScreen(name))
+
     async def after_connect(self) -> None:
         self.online = True
         self.update_subtitle()
@@ -290,7 +318,7 @@ class ChatApp(App):
             await self.client.log_console(f"Reconnect attempt {attempt} failed: {error}")
 
     async def reconnect_once(self) -> str | None:
-        result = await login.fetch_ticket(str(self.config.get("account")), str(self.config.get("password")))
+        result = await self.fetch_ticket()
         if result.error and not result.temporary:
             self.sub_title = "offline"
             self.show_login(result.error)
