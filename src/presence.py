@@ -12,11 +12,12 @@ class Presence:
         self.status: dict[str, str] = {}
         self.messages: dict[str, str] = {}
         self.friends: set[str] = set()
+        self.bookmarks: set[str] = set()
         self.members: dict[str, dict[str, str]] = {}
         self.ops: dict[str, set[str]] = {}
 
     def _changed_for(self, key:str) -> None:
-        if key in self.friends:
+        if key in self.friends or key in self.bookmarks:
             self.on_change(FRIENDS)
         for code, members in self.members.items():
             if key in members:
@@ -53,6 +54,23 @@ class Presence:
 
     def find_online(self, name:str) -> str | None:
         return self.online.get(name.strip().lower())
+
+    def set_bookmarks(self, names:list[str]) -> None:
+        self.bookmarks = {name.lower() for name in names}
+        self.on_change(FRIENDS)
+
+    def add_bookmark(self, name:str) -> None:
+        self.bookmarks.add(name.lower())
+        self.on_change(FRIENDS)
+
+    def remove_bookmark(self, name:str) -> None:
+        self.bookmarks.discard(name.lower())
+        self.on_change(FRIENDS)
+
+    def online_bookmarks(self) -> list[tuple[str, str, bool]]:
+        keys = self.bookmarks - self.friends
+        entries = [(self.online[key], self.status.get(key, "online"), False) for key in keys if key in self.online]
+        return sorted(entries, key=lambda entry: entry[0].lower())
 
     def set_friends(self, names:list[str]) -> None:
         self.friends = {name.lower() for name in names}

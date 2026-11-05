@@ -136,7 +136,13 @@ class Consumer:
         await self.client.on_presence_notice(name, "is online", self.is_friend(name))
 
     async def on_friends(self, data:dict) -> None:
-        self.client.presence.set_friends(data.get("characters", []))
+        friends = self.app.account_friends()
+        if friends is None:
+            bookmarks = self.client.presence.bookmarks
+            friends = [name for name in data.get("characters", []) if str(name).lower() not in bookmarks]
+        logging("debug.log", f"FRL: {len(data.get('characters', []))} from server, {len(friends)} friends, "
+                             f"{len(self.client.presence.bookmarks)} bookmarks\n")
+        self.client.presence.set_friends(friends)
 
     async def on_status(self, data:dict) -> None:
         self.client.presence.set_status(data["character"], data.get("status", "online"), data.get("statusmsg", ""))
@@ -182,6 +188,12 @@ class Consumer:
 
     async def on_site_event(self, data:dict) -> None:
         kind = data.get("type", "event")
+        if kind in ("bookmarkadd", "bookmarkremove") and data.get("name"):
+            if kind == "bookmarkadd":
+                self.client.presence.add_bookmark(data["name"])
+            else:
+                self.client.presence.remove_bookmark(data["name"])
+            self.client.app.remember_bookmarks(self.client.presence.bookmarks)
         who = data.get("name") or data.get("sender") or data.get("character") or ""
         details = data.get("subject") or data.get("title") or ""
         text = f"Site event: {kind}" + (f" from [user]{who}[/user]" if who else "") + (f" - {details}" if details else "")

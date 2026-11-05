@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 
 import aiohttp
 
+from chat_log import logging
+
 
 API_TICKET_URL = "https://www.f-list.net/json/getApiTicket.php"
 TIMEOUT_SECONDS = 20
@@ -12,8 +14,25 @@ class LoginResult:
     ticket: str = ""
     characters: list[str] = field(default_factory=list)
     default_character: str = ""
+    bookmarks: list[str] = field(default_factory=list)
+    friends: list[tuple[str, str]] | None = None
     error: str = ""
     temporary: bool = False
+
+
+def bookmark_names(items:object) -> list[str]:
+    if not isinstance(items, list):
+        return []
+    names = [item.get("name") if isinstance(item, dict) else item for item in items]
+    return [str(name) for name in names if name]
+
+
+def friend_pairs(items:object) -> list[tuple[str, str]] | None:
+    if not isinstance(items, list):
+        logging("debug.log", f"ticket friends: {type(items).__name__}\n")
+        return None
+    dicts = [item for item in items if isinstance(item, dict)]
+    return [(str(item.get("source_name", "")), str(item.get("dest_name", ""))) for item in dicts]
 
 
 async def fetch_ticket(account:str, password:str) -> LoginResult:
@@ -23,8 +42,8 @@ async def fetch_ticket(account:str, password:str) -> LoginResult:
     data = {
         "account": account,
         "password": password,
-        "no_friends": "true",
-        "no_bookmarks": "true",
+        "no_friends": "false",
+        "no_bookmarks": "false",
         "new_character_list": "true",
     }
     try:
@@ -48,6 +67,8 @@ async def fetch_ticket(account:str, password:str) -> LoginResult:
         ticket=str(payload.get("ticket", "")),
         characters=sorted(names, key=str.lower),
         default_character=str(payload.get("default_character", "")),
+        bookmarks=bookmark_names(payload.get("bookmarks")),
+        friends=friend_pairs(payload.get("friends")),
     )
 
 

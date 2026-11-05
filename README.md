@@ -219,7 +219,7 @@ Click a link to open it in your browser. When the client runs over SSH or withou
 
 The console collects global events: connection, server messages and errors, broadcasts, site events, invitations, and friends or characters you have a private chat open with going online or offline. In an open private chat, the partner going offline or coming back online is also shown as a system line (without marking the chat as unread). It is read-only and cannot be closed. Channel related events (kicks, bans, timeouts, operator changes, channel notices) are shown in the affected channel instead.
 
-The sidebar on the right has two tabs: *Friends* lists your friends that are online, *Channel* lists the users of the open channel (channel operators first, marked with `@`). It switches to the matching tab when you change chats. Press `enter` on a name to open a private chat. Status symbols: `+` looking, `•` online, `~` idle/away, `-` busy, `x` do not disturb.
+The sidebar on the right has two tabs: *Friends* lists your friends that are online and below them, as *Bookmarks*, the online characters you bookmarked on f-list (bookmarks added or removed on the website are picked up while you are connected), *Channel* lists the users of the open channel (channel operators first, marked with `@`). It switches to the matching tab when you change chats. Press `enter` on a name to open a private chat. Status symbols: `+` looking, `•` online, `~` idle/away, `-` busy, `x` do not disturb.
 
 ### Connection loss
 

@@ -66,6 +66,8 @@ class ChatApp(App):
         self.ticket = ""
         self.ticket_time = 0.0
         self.profile_api: ProfileApi | None = None
+        self.bookmarks: list[str] = []
+        self.friend_pairs: list[tuple[str, str]] | None = None
         self.eicons = None
         if config.get("eicons", "inline") == "inline":
             self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
@@ -278,10 +280,28 @@ class ChatApp(App):
     async def fetch_ticket(self) -> login.LoginResult:
         result = await login.fetch_ticket(str(self.config.get("account")), str(self.config.get("password")))
         if not result.error:
+            self.remember_bookmarks(result.bookmarks)
+            self.friend_pairs = result.friends
             self.ticket = result.ticket
             self.ticket_time = asyncio.get_running_loop().time()
             self.profile_api = ProfileApi(str(self.config.get("account")), self.api_ticket, default_cache_dir())
         return result
+
+    def account_friends(self) -> list[str] | None:
+        if not self.friend_pairs:
+            return None
+        own = {name.lower() for name in self.characters}
+        friends = set()
+        for source, dest in self.friend_pairs:
+            if source.lower() in own:
+                friends.add(dest)
+            elif dest.lower() in own or not own:
+                friends.add(source)
+        return sorted(friends, key=str.lower) or None
+
+    def remember_bookmarks(self, names:object) -> None:
+        self.bookmarks = sorted(names, key=str.lower)
+        self.client.presence.set_bookmarks(self.bookmarks)
 
     async def api_ticket(self) -> str:
         if self.ticket and asyncio.get_running_loop().time() - self.ticket_time < TICKET_MAX_AGE:
@@ -302,6 +322,7 @@ class ChatApp(App):
             self.push_screen(ProfileScreen(name))
 
     async def after_connect(self) -> None:
+        self.client.presence.set_bookmarks(self.bookmarks)
         self.online = True
         self.update_subtitle()
         await self.client.restore_status()
@@ -381,7 +402,9 @@ class ChatApp(App):
         presence = self.client.presence
 
         friends = presence.online_friends()
-        self.sidebar.update_list("friends_list", "tab_friends", f"Friends ({len(friends)})", friends, "No friends online")
+        bookmarks = presence.online_bookmarks()
+        self.sidebar.update_list("friends_list", "tab_friends", f"Friends ({len(friends)})", friends, "No friends online",
+                                 [("Bookmarks", bookmarks)] if presence.bookmarks else [])
 
         chat = self.current_chat()
         if chat is None or chat.kind != CHANNEL:
@@ -407,7 +430,7 @@ class ChatApp(App):
     async def on_option_list_option_selected(self, event:OptionList.OptionSelected) -> None:
         if event.option_list.id not in ("friends_list", "members_list") or event.option.id is None:
             return
-        await self.client.open_private(event.option.id)
+        await self.client.open_private(event.option.id.removeprefix("Bookmarks:"))
         self.query_one("#chat_input", ChatInput).focus()
 
     def chat_line(self, line:str) -> ChatLine:

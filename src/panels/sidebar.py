@@ -58,8 +58,10 @@ class Sidebar(Vertical):
     def show_tab(self, tab_id:str) -> None:
         self.query_one(TabbedContent).active = tab_id
 
-    def update_list(self, list_id:str, tab_id:str, label:str, entries:list[Entry], empty:str) -> None:
-        key = (label, tuple(entries), empty)
+    def update_list(self, list_id:str, tab_id:str, label:str, entries:list[Entry], empty:str,
+                    sections:list[tuple[str, list[Entry]]] | None=None) -> None:
+        sections = sections or []
+        key = (label, tuple(entries), empty, tuple((title, tuple(items)) for title, items in sections))
         if self.shown.get(list_id) == key:
             return
         self.shown[list_id] = key
@@ -69,12 +71,16 @@ class Sidebar(Vertical):
         highlighted = view.highlighted_option.id if view.highlighted_option else None
 
         view.clear_options()
-        if entries:
-            view.add_options([Option(render_entry(*entry, self.name_style), id=entry[0]) for entry in entries])
-            names = [entry[0] for entry in entries]
-            if highlighted in names:
-                view.highlighted = names.index(highlighted)
-        else:
-            view.add_option(Option(empty, disabled=True))
+        options = [Option(render_entry(*entry, self.name_style), id=entry[0]) for entry in entries]
+        if not entries:
+            options.append(Option(Text(empty, "dim"), disabled=True))
+        for title, items in sections:
+            options.append(Option("", disabled=True))
+            options.append(Option(Text(f"{title} ({len(items)})", "bold"), disabled=True))
+            options.extend(Option(render_entry(*entry, self.name_style), id=f"{title}:{entry[0]}") for entry in items)
+        view.add_options(options)
+        ids = [option.id for option in options]
+        if highlighted in ids:
+            view.highlighted = ids.index(highlighted)
         view.scroll_to(y=scroll_y, animate=False)
         self.query_one(TabbedContent).get_tab(tab_id).label = label
