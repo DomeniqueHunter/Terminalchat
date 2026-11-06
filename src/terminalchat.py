@@ -318,8 +318,8 @@ class ChatApp(App):
         self.bookmarks = sorted(names, key=str.lower)
         self.client.presence.set_bookmarks(self.bookmarks)
 
-    async def api_ticket(self) -> str:
-        if self.ticket and asyncio.get_running_loop().time() - self.ticket_time < TICKET_MAX_AGE:
+    async def api_ticket(self, new_ticket:bool=False) -> str:
+        if not new_ticket and self.ticket and asyncio.get_running_loop().time() - self.ticket_time < TICKET_MAX_AGE:
             return self.ticket
         result = await self.fetch_ticket()
         if result.error:

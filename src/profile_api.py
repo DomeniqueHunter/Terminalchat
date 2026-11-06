@@ -83,7 +83,7 @@ def build_profile(data:dict, mapping:dict) -> Profile:
 
 class ProfileApi:
 
-    def __init__(self, account:str, ticket_source:Callable[[], Awaitable[str]], cache_dir:Path) -> None:
+    def __init__(self, account:str, ticket_source:Callable[[bool], Awaitable[str]], cache_dir:Path) -> None:
         self.account = account
         self.ticket_source = ticket_source
         self.mapping_file = cache_dir / "mapping-list.json"
@@ -123,9 +123,18 @@ class ProfileApi:
         return self.mapping_data
 
     async def profile(self, name:str) -> Profile:
-        ticket = await self.ticket_source()
-        data = await self.request("character-data.php", {"account": self.account, "ticket": ticket, "name": name})
+        try:
+            data = await self.character_data(name, False)
+        except ProfileError as error:
+            if "ticket" not in str(error).lower():
+                raise
+            logging("debug.log", f"profile request: {error}, fetching a new ticket\n")
+            data = await self.character_data(name, True)
         return build_profile(data, await self.mapping())
+
+    async def character_data(self, name:str, new_ticket:bool) -> dict:
+        ticket = await self.ticket_source(new_ticket)
+        return await self.request("character-data.php", {"account": self.account, "ticket": ticket, "name": name})
 
 
 def main() -> None:
