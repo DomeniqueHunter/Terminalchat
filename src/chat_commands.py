@@ -110,7 +110,7 @@ SHORTCUT_INFO = [
     ("ctrl+q", "quit"),
     ("escape", "close a dialog"),
     ("click title bar", "show/hide your status message"),
-    ("click link", "open it in the browser"),
+    ("click link / image", "copy the link to the clipboard"),
 ]
 
 SHORTCUTS_TEXT = "\n".join(f"{key:<20} {description}" for key, description in SHORTCUT_INFO)

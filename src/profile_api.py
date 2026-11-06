@@ -26,6 +26,7 @@ class Profile:
     description: str = ""
     infotags: list[tuple[str, list[tuple[str, str]]]] = field(default_factory=list)
     kinks: dict[str, list[str]] = field(default_factory=dict)
+    images: list[tuple[str, str]] = field(default_factory=list)
     views: int = 0
     created: int = 0
     updated: int = 0
@@ -69,7 +70,17 @@ def build_profile(data:dict, mapping:dict) -> Profile:
     for names in kinks.values():
         names.sort(key=str.lower)
 
+    raw_images = data.get("images") or []
+    if isinstance(raw_images, dict):
+        raw_images = list(raw_images.values())
+    images = []
+    for item in sorted((item for item in raw_images if isinstance(item, dict)), key=lambda item: int(item.get("sort_order") or 0)):
+        image_id, extension = str(item.get("image_id") or item.get("id") or ""), str(item.get("extension") or "")
+        if image_id.isdigit() and extension.isalnum():
+            images.append((f"{image_id}.{extension}", str(item.get("description") or "")))
+
     return Profile(
+        images=images,
         name=str(data.get("name", "")),
         title=str(data.get("custom_title") or ""),
         description=str(data.get("description") or ""),

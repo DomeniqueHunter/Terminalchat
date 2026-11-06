@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from PIL import Image as PILImage
@@ -101,6 +102,19 @@ class GenericEicon(FrameAnimation, BaseImage, Renderable=AutoRenderable):
 
     def show_frame(self, index:int) -> None:
         self.image = self.frames[index]
+
+
+def image_backend() -> str:
+    from textual_image._terminal import probe_terminal
+    try:
+        capabilities = probe_terminal()
+        cell = f"{capabilities.cell_size.width}x{capabilities.cell_size.height} px"
+        detected = f"sixel={capabilities.sixel}, tgp={capabilities.tgp}"
+    except Exception as error:
+        cell, detected = "?", f"probe failed: {error!r}"
+    renderer = getattr(Image, "_Renderable", None) or getattr(Image, "Renderable", None)
+    name = Image.__name__ if Image is SixelImage else f"{Image.__name__} ({getattr(renderer, '__module__', '?')})"
+    return f"Images: {name}, cell {cell}, detected {detected}, TERM={os.environ.get('TERM', '')}, TMUX={'yes' if os.environ.get('TMUX') else 'no'}"
 
 
 def make_eicon_widget(eicon:Eicon) -> SixelEicon | GenericEicon:

@@ -30,7 +30,7 @@ Components (only the given ones are deleted):
   --config        configuration and stored password
   --data          all data: chat logs, pins, status, ad texts, genders
   --logs          only chat logs and debug.log, keep pins, status etc.
-  --eicons        eicon and avatar cache
+  --eicons        eicon, avatar and thumbnail cache
 
 Options:
   --keep-config   keep the configuration

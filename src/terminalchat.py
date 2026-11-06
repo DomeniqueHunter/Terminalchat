@@ -2,10 +2,6 @@
 
 import asyncio
 import html
-import os
-import shutil
-import subprocess
-import sys
 
 from rich.style import Style
 from rich.text import Text
@@ -21,6 +17,7 @@ from chat_widgets import ChatInput, ChatLine, CommandHints, InputModeBar, Status
 from client import Client
 from color_config import gender_style
 import paths
+from animated_eicon import image_backend
 from chat_log import logging, set_log_dir
 from config import Config
 from eicons import EiconCache, default_cache_dir
@@ -202,13 +199,7 @@ class ChatApp(App):
             self.run_worker(self.client.join(url[len(CHANNEL_LINK):]))
             return
         if not is_safe_url(url):
-            self.notify(f"Not opening link, only http and https are allowed: {url}", severity="warning", timeout=10)
-            return
-        opener = "open" if sys.platform == "darwin" else "xdg-open"
-        graphical = sys.platform == "darwin" or os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
-        if graphical and not os.environ.get("SSH_CONNECTION") and shutil.which(opener):
-            subprocess.Popen([opener, url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-            self.notify(url, title="Opening link")
+            self.notify(f"Not copying link, only http and https are allowed: {url}", severity="warning", timeout=10)
             return
         self.copy_to_clipboard(url)
         self.notify(url, title="Link copied to clipboard", timeout=15)
@@ -729,6 +720,7 @@ def build_app() -> ChatApp:
     app = ChatApp(config)
     app.startup_notes = [note for note in notes if note]
     app.startup_notes.append(f"Config: {config.path} | Data: {config.data_dir}")
+    app.startup_notes.append(image_backend())
     return app
 
 

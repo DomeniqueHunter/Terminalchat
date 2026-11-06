@@ -17,9 +17,12 @@ from chat_log import logging
 EICON_URL = "https://static.f-list.net/images/eicon/{name}.gif"
 AVATAR_URL = "https://static.f-list.net/images/avatar/{name}.png"
 PROFILE_URL = "https://www.f-list.net/c/{name}"
+THUMB_URL = "https://static.f-list.net/images/charthumb/{name}"
+FULL_IMAGE_URL = "https://static.f-list.net/images/charimage/{name}"
 EICON = "eicon"
 AVATAR = "icon"
-IMAGE_SOURCES = {EICON: (EICON_URL, "eicons", ".gif"), AVATAR: (AVATAR_URL, "avatars", ".png")}
+THUMB = "thumb"
+IMAGE_SOURCES = {EICON: (EICON_URL, "eicons", ".gif"), AVATAR: (AVATAR_URL, "avatars", ".png"), THUMB: (THUMB_URL, "thumbs", "")}
 EICON_PATTERN = re.compile(r"\[eicon\](.*?)\[/eicon\]", re.IGNORECASE)
 IMAGE_PATTERN = re.compile(r"\[(eicon|icon)\](.*?)\[/\1\]", re.IGNORECASE)
 NOPARSE_PATTERN = re.compile(r"\[noparse\].*?\[/noparse\]", re.IGNORECASE)
@@ -47,6 +50,10 @@ def eicon_url(name:str) -> str:
 
 def image_url(kind:str, name:str) -> str:
     return IMAGE_SOURCES[kind][0].format(name=quote(name.strip().lower(), safe=""))
+
+
+def full_image_url(file_name:str) -> str:
+    return FULL_IMAGE_URL.format(name=quote(file_name, safe=""))
 
 
 def profile_url(name:str) -> str:

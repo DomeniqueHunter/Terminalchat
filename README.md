@@ -134,7 +134,7 @@ Type commands into the input line.
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/bbcode [search]` | List all BBCode tags with a preview and insert one into the input (also `ctrl+b`); selected text is wrapped, otherwise the cursor is placed inside the tags |
 | `/emoji [search]` | Open the emoji picker (also `ctrl+e`); the chosen emoji is inserted into the input at the cursor, not sent |
-| `/profile [name]` | Show a character's f-list profile in a window (alias: `/profil`): avatar, title, status, details, description and kinks in tabs. Without a name in a private chat it shows the partner. `o` opens the profile in the browser |
+| `/profile [name]` | Show a character's f-list profile in a window (alias: `/profil`): avatar, title, status, details, description, kinks and images in tabs. The images tab shows the gallery as thumbnails, loaded only when the tab is opened; click one to open the full image in the browser. Without a name in a private chat it shows the partner. `o` opens the profile in the browser |
 | `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
 | `/help` | Show the command list (closes with `esc`) |
 | `/shortcuts` | Show all key bindings (alias: `/keys`, closes with `esc`) |
@@ -286,6 +286,7 @@ Paths below `<data>` refer to the data directory (default `~/.local/share/termin
 | `<data>/debug.log` | Debug output |
 | `~/.cache/terminalchat/eicons/` | Eicon cache |
 | `~/.cache/terminalchat/avatars/` | Avatar cache for `[icon]` and profiles |
+| `~/.cache/terminalchat/thumbs/` | Thumbnails of profile images |
 | `~/.cache/terminalchat/mapping-list.json` | Names of profile fields and kinks from f-list, refreshed weekly |
 | `tmux.conf` | Settings for the launcher's tmux server |
 
@@ -308,7 +309,7 @@ Components (when given, only these are deleted; they can be combined):
 | `--config` | Configuration and stored password |
 | `--data` | All data: chat logs, pins, status, ad texts, genders |
 | `--logs` | Only chat logs (including `.bak` files) and `debug.log`; pins, status, ad texts etc. are kept |
-| `--eicons` | Eicon and avatar cache |
+| `--eicons` | Eicon, avatar and thumbnail cache |
 
 Options:
 
