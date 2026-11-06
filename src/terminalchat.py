@@ -9,6 +9,7 @@ import sys
 
 from rich.style import Style
 from rich.text import Text
+from textual import events
 from textual.app import App, ComposeResult
 from textual.css.query import NoMatches
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -20,7 +21,7 @@ from chat_widgets import ChatInput, ChatLine, CommandHints, InputModeBar, Status
 from client import Client
 from color_config import gender_style
 import paths
-from chat_log import set_log_dir
+from chat_log import logging, set_log_dir
 from config import Config
 from eicons import EiconCache, default_cache_dir
 from panels.channels_list_panel import ChannelsList
@@ -45,6 +46,11 @@ RECONNECT_DELAYS = (5, 15, 30, 60, 120, 300)
 TICKET_MAX_AGE = 25 * 60
 NO_RECONNECT_ERRORS = {9, 31}
 CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+a: ads)"
+
+
+class ListLabel(Label):
+
+    ALLOW_SELECT = False
 
 
 class ChatApp(App):
@@ -113,6 +119,15 @@ class ChatApp(App):
     @property
     def sidebar(self) -> Sidebar:
         return self.query_one("#sidebar", Sidebar)
+
+    async def on_event(self, event:events.Event) -> None:
+        if not isinstance(event, events.MouseDown):
+            await super().on_event(event)
+            return
+        try:
+            await super().on_event(event)
+        except AttributeError as error:
+            logging("debug.log", f"ignored mouse down on a removed widget: {error!r}\n")
 
     async def on_mount(self) -> None:
         self.sidebar.display = bool(self.config.get("show_sidebar", False))
@@ -447,7 +462,7 @@ class ChatApp(App):
         pin = "+" if self.client.pins.is_pinned(chat) else " "
         title = html.unescape(chat.title)
         style = self.name_style(chat.key) if chat.kind == USER else Style()
-        return ListItem(Label(Text.assemble(f"{marker}{pin}{prefix}", (title, style))))
+        return ListItem(ListLabel(Text.assemble(f"{marker}{pin}{prefix}", (title, style))))
 
     async def rebuild_list(self) -> None:
         async with self.list_lock:
@@ -462,7 +477,7 @@ class ChatApp(App):
         for group in [group for group in groups if group]:
             if items:
                 self.list_ids.append(None)
-                items.append(ListItem(Label(""), disabled=True))
+                items.append(ListItem(ListLabel(""), disabled=True))
             for chat in group:
                 self.list_ids.append(chat.id)
                 items.append(self.list_entry(chat))
