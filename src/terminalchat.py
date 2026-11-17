@@ -19,6 +19,7 @@ from color_config import gender_style
 import paths
 from animated_eicon import image_backend
 from chat_log import logging, set_log_dir
+from image_cells import current_cell_size, measure_cell_size, refresh_images, set_cell_size
 from config import Config
 from eicons import EiconCache, default_cache_dir
 from panels.channels_list_panel import ChannelsList
@@ -41,6 +42,7 @@ GENDER_SAVE_SECONDS = 30
 INPUT_BAR_REFRESH_SECONDS = 1.0
 RECONNECT_DELAYS = (5, 15, 30, 60, 120, 300)
 TICKET_MAX_AGE = 25 * 60
+RESIZE_CHECK_SECONDS = 0.5
 NO_RECONNECT_ERRORS = {9, 31}
 CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+a: ads)"
 
@@ -116,6 +118,31 @@ class ChatApp(App):
     @property
     def sidebar(self) -> Sidebar:
         return self.query_one("#sidebar", Sidebar)
+
+    def on_resize(self, event:events.Resize) -> None:
+        if getattr(self, "resize_timer", None) is not None:
+            self.resize_timer.stop()
+        self.resize_timer = self.set_timer(RESIZE_CHECK_SECONDS, self.check_cell_size)
+
+    def check_cell_size(self) -> None:
+        cell = measure_cell_size()
+        if cell is not None and set_cell_size(cell):
+            self.redraw_images(f"Images: cell size changed to {cell.width}x{cell.height} px, redrawing images")
+
+    def redraw_images(self, note:str) -> None:
+        for screen in self.screen_stack:
+            refresh_images(screen)
+        if self.online:
+            self.run_worker(self.client.log_console(note))
+
+    def resize_images(self) -> None:
+        cell = measure_cell_size()
+        if cell is None:
+            old = current_cell_size()
+            self.redraw_images(f"Images: could not measure the cell size, keeping {old.width}x{old.height} px")
+            return
+        set_cell_size(cell)
+        self.redraw_images(f"Images: cell size {cell.width}x{cell.height} px, redrawing images")
 
     async def on_event(self, event:events.Event) -> None:
         if not isinstance(event, events.MouseDown):
@@ -508,6 +535,7 @@ class ChatApp(App):
             widgets = [self.chat_line(line) for line in lines] or [Static("No messages yet", classes="placeholder")]
             await self.chat_view.mount_all(widgets)
             self.chat_view.scroll_end(animate=False)
+            self.chat_view.call_after_refresh(self.chat_view.scroll_end, animate=False)
         self.update_input_mode()
         await self.rebuild_list()
 
@@ -515,9 +543,12 @@ class ChatApp(App):
         if chat_id == self.active_chat:
             async with self.view_lock:
                 if chat_id == self.active_chat:
-                    await self.chat_view.query(".placeholder").remove()
-                    await self.chat_view.mount(self.chat_line(line))
-                    self.chat_view.scroll_end(animate=False)
+                    view = self.chat_view
+                    at_end = view.scroll_y >= view.max_scroll_y - 1
+                    await view.query(".placeholder").remove()
+                    await view.mount(self.chat_line(line))
+                    if at_end:
+                        view.call_after_refresh(view.scroll_end, animate=False)
             return
         chat = self.client.store.get(chat_id)
         if chat is not None and mark_unread:

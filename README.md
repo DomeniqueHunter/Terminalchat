@@ -127,6 +127,7 @@ Type commands into the input line.
 | `/status:flag <status>` | Change only the status, keep the message |
 | `/status:message [text]` | Change only the message, keep the status. Without text an editor opens with the current message and a preview (`enter` saves, `ctrl+enter` / `shift+enter` / `ctrl+j` adds a new line, `esc` cancels, saving an empty text clears the message) |
 | `/ads [on\|off]` | Show or hide ads (role play ads) in the current channel; hidden ads are still logged and reappear with `/ads on`. Stored per channel and character |
+| `/resizeimages` | Measure the terminal's cell size again and redraw all images; normally this happens automatically when the window size changes |
 | `/gif [on\|off]` | Turn eicon animation on or off; without argument it toggles |
 | `/char [name]` | Switch character; without a name a character picker opens |
 | `/reconnect` | Reconnect to the chat server now (see *Connection loss*) |
@@ -134,7 +135,7 @@ Type commands into the input line.
 | `/minimize` | Detach and keep running in the background (alias: `/detach`, needs the launcher) |
 | `/bbcode [search]` | List all BBCode tags with a preview and insert one into the input (also `ctrl+b`); selected text is wrapped, otherwise the cursor is placed inside the tags |
 | `/emoji [search]` | Open the emoji picker (also `ctrl+e`); the chosen emoji is inserted into the input at the cursor, not sent |
-| `/profile [name]` | Show a character's f-list profile in a window (alias: `/profil`): avatar, title, status, details, description, kinks and images in tabs. The images tab shows the gallery as thumbnails, loaded only when the tab is opened; click one to open the full image in the browser. Without a name in a private chat it shows the partner. `o` opens the profile in the browser |
+| `/profile [name]` | Show a character's f-list profile in a window (alias: `/profil`): avatar, title, status, details, description, kinks and images in tabs. The images tab shows the gallery as thumbnails (five per row, each fitted into the same box with its aspect ratio kept), loaded only when the tab is opened; click one to copy the link to the full image. Without a name in a private chat it shows the partner. `o` copies the profile link |
 | `/chatstatus` | In a private chat: show the partner's status and status message. In a channel: show the channel description |
 | `/help` | Show the command list (closes with `esc`) |
 | `/shortcuts` | Show all key bindings (alias: `/keys`, closes with `esc`) |
@@ -208,14 +209,15 @@ In the chat list on the left, the console (`>`) is at the top, followed by chann
 
 Messages are sent as you type them; BBCode is rendered when messages are shown. Supported: `b`, `i`, `u`, `s`, `color`, `big`, `small`, `sub`, `sup`, `heading`, `user`, `icon`, `eicon`, `url`, `session`, `channel`, `spoiler`, `quote`, `noparse`, `hr`. Alignment and layout tags (`center`, `indent`, `collapse`, ...) are removed, their text is kept. Unknown tags are shown as text.
 
+- Images are drawn for the terminal's cell size in pixels. When the window changes (e.g. after `/minimize` and re-attaching from a smaller window or with another font size), the client measures the cell size again, notes it in the console and redraws all images. If images still look wrong, `/resizeimages` does the same by hand.
 - Eicons and avatars are shown inside the text line (`text [eicon]x[/eicon] text`), with the text vertically centered. If the text before the last image is too long for that (more than about 60 characters including time and name), or a line contains only images (eicon grids), the images are shown in their own row below the text instead.
 - Click a character name (`[user]`) to open a private chat.
-- `[icon]` shows the character's avatar as an image (like eicons); click it to open the f-list profile in the browser, or to copy the profile link when running over SSH. With `"eicons": "off"` it is shown as `[Name]` linking to the profile.
+- `[icon]` shows the character's avatar as an image (like eicons); click it to copy the link to the f-list profile. With `"eicons": "off"` it is shown as `[Name]` linking to the profile.
 - Click a channel link (`[session]`, `[channel]`) to join the channel.
 - Spoilers are hidden behind a ` spoiler ` label; click it to reveal the message's spoilers.
 - Quotes are shown as an indented block with `│` and the author if given (`[quote=Name]`).
 
-Click a link to open it in your browser. When the client runs over SSH or without a graphical session, the link is copied to the clipboard instead (OSC 52; needs a terminal that supports it, e.g. Konsole, kitty, WezTerm) and shown as a notification.
+Click a link (or an avatar or profile image) to copy it to the clipboard; it is also shown as a notification. Copying uses OSC 52 and works locally, over SSH and inside the launcher's tmux, as long as the terminal supports it (e.g. Konsole, kitty, WezTerm).
 
 The console collects global events: connection, server messages and errors, broadcasts, site events, invitations, and friends or characters you have a private chat open with going online or offline. In an open private chat, the partner going offline or coming back online is also shown as a system line (without marking the chat as unread). It is read-only and cannot be closed. Channel related events (kicks, bans, timeouts, operator changes, channel notices) are shown in the affected channel instead.
 

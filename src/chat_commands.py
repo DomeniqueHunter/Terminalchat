@@ -52,6 +52,7 @@ COMMAND_INFO = [
     ("unpin", "", "unpin the current chat"),
     ("pins", "", "show pinned chats"),
     ("ads", "[on|off]", "show or hide ads in the current channel"),
+    ("resizeimages", "", "measure the terminal cell size again and redraw all images"),
     ("gif", "[on|off]", "toggle animated eicons"),
     ("char", "[name]", "switch character"),
     ("reconnect", "", "reconnect to the chat server now"),
@@ -162,6 +163,7 @@ class ChatCommands:
             "pins": self.cmd_pins,
             "ads": self.cmd_ads,
             "gif": self.cmd_gif,
+            "resizeimages": self.cmd_resizeimages,
             "char": self.cmd_char,
             "reconnect": self.cmd_reconnect,
             "logout": self.cmd_logout,
@@ -403,6 +405,9 @@ class ChatCommands:
             await self.app.open_chat(chat.id)
         state = "shown" if self.client.ads.visible(chat.key) else "hidden"
         self.app.notify(f"Ads in {chat.title}: {state}")
+
+    async def cmd_resizeimages(self, args:str) -> None:
+        self.app.resize_images()
 
     async def cmd_gif(self, args:str) -> None:
         value = args.lower()
