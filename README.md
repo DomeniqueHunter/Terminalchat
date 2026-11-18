@@ -143,7 +143,7 @@ Type commands into the input line.
 
 ### Chat history
 
-A chat shows today's messages, below a line with the date (`──── 2026-11-19 ────`). If today has fewer than 20 messages, the previous day is shown as well. Scroll to the top to load older messages: in blocks of 300 lines, day by day, until "Beginning of the log". Blocks far above the visible area are dropped again when you scroll down, so only what you look at is kept in memory; the log files themselves are only read when needed. At midnight the open chat is cleared and starts with the new date line (the date lines are not written to the log). This applies to all chats including the console.
+A chat shows today's messages, below a line with the date (`──── 2026-11-19 ────`). If today has fewer than 20 messages, the previous day is shown as well. Scroll to the top to load older messages: in blocks of 300 lines, day by day, until "Beginning of the log". At most 600 lines are loaded at a time: scrolling further up drops the newest blocks, and scrolling back down loads them again (new messages that arrive meanwhile appear once you are back at the end). Blocks far above the visible area are dropped as well, so only what you look at is kept in memory; the log files themselves are only read when needed. At midnight the open chat is cleared and starts with the new date line (the date lines are not written to the log). This applies to all chats including the console.
 
 ### Chat and ads input
 

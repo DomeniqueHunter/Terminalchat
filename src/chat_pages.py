@@ -11,6 +11,7 @@ from chat_store import CHANNEL, Chat, is_ad_line, read_entries
 
 BLOCK_LINES = 300
 MIN_OPEN_LINES = 20
+MAX_LOADED_LINES = 600
 TOP_TRIGGER_ROWS = 1
 RULE_WIDTH = 24
 
@@ -86,6 +87,7 @@ class ChatPager:
         self.make_line = make_line
         self.chat: Chat | None = None
         self.loading = False
+        self.live = True
 
     @property
     def blocks(self) -> list[Block]:
@@ -104,6 +106,13 @@ class ChatPager:
     def days_before(self, day:str) -> list[str]:
         files = self.app.client.store.day_files(self.chat)
         return [path.stem for path in files if path.stem < day]
+
+    def days_after(self, day:str) -> list[str]:
+        files = self.app.client.store.day_files(self.chat)
+        return [path.stem for path in files if path.stem > day]
+
+    def loaded_lines(self) -> int:
+        return sum(block.end - block.start for block in self.blocks)
 
     def build_block(self, day:str, start:int, end:int, lines:list[str]) -> Block:
         block = Block(day, start, end)
@@ -138,12 +147,70 @@ class ChatPager:
                 return OlderRange(day, start, len(lines), lines[start:])
         return None
 
+    def newer_range(self) -> OlderRange | None:
+        blocks = self.blocks
+        if not blocks:
+            return None
+        bottom = blocks[-1]
+        lines = self.entries(bottom.day)
+        if bottom.end < len(lines):
+            end = min(len(lines), bottom.end + BLOCK_LINES)
+            return OlderRange(bottom.day, bottom.end, end, lines[bottom.end:end])
+        for day in self.days_after(bottom.day):
+            lines = self.entries(day)
+            if lines:
+                end = min(len(lines), BLOCK_LINES)
+                return OlderRange(day, 0, end, lines[:end])
+        return None
+
+    async def load_newer(self) -> bool:
+        newer = self.newer_range()
+        if newer is None:
+            self.live = True
+            return False
+        await self.mount_block(self.build_block(newer.day, newer.start, newer.end, newer.lines))
+        if self.newer_range() is None:
+            self.live = True
+        await self.drop_top_over_limit()
+        return True
+
+    async def drop_bottom_over_limit(self) -> None:
+        removed = []
+        blocks = self.blocks
+        total = self.loaded_lines()
+        while total > MAX_LOADED_LINES and len(blocks) > 1:
+            block = blocks.pop()
+            total -= block.end - block.start
+            removed.append(block)
+        if removed:
+            self.live = False
+            await self.view.remove_children(removed)
+            self.request_trim()
+
+    async def drop_top_over_limit(self) -> None:
+        removed = []
+        blocks = self.blocks
+        total = self.loaded_lines()
+        while total > MAX_LOADED_LINES and len(blocks) > 1:
+            block = blocks.pop(0)
+            total -= block.end - block.start
+            removed.append(block)
+        if not removed:
+            return
+        starts = children_of(self.view, LogStart)
+        height = sum(widget.virtual_region.height for widget in removed + starts)
+        old_y = self.view.scroll_y
+        await self.view.remove_children(starts + removed)
+        self.view.call_after_refresh(self.view.scroll_to, y=max(0, old_y - height), animate=False)
+        self.request_trim()
+
     async def reset(self) -> None:
         self.chat = None
         await self.view.remove_children()
 
     async def open(self, chat:Chat, day:str | None=None, fill:bool=True) -> None:
         self.chat = chat
+        self.live = True
         await self.view.remove_children()
         self.request_trim()
         day = day or today()
@@ -175,6 +242,7 @@ class ChatPager:
         block = self.build_block(older.day, older.start, older.end, older.lines)
         await self.mount_block(block, before=self.blocks[0])
         await self.update_log_start()
+        await self.drop_bottom_over_limit()
         if keep_position:
             def restore() -> None:
                 delta = self.view.virtual_size.height - old_height
@@ -187,7 +255,7 @@ class ChatPager:
 
     async def append(self, line:str) -> None:
         blocks = self.blocks
-        if self.chat is None or not blocks:
+        if self.chat is None or not blocks or not self.live:
             return
         day = line[1:11]
         if day > blocks[-1].day:
@@ -221,6 +289,8 @@ class ChatPager:
         try:
             if y <= TOP_TRIGGER_ROWS:
                 await self.load_older()
+            elif not self.live and y >= self.view.max_scroll_y - TOP_TRIGGER_ROWS:
+                await self.load_newer()
             else:
                 await self.unload_far()
         finally:
@@ -249,7 +319,7 @@ class ChatPager:
 
     async def check_day(self) -> None:
         blocks = self.blocks
-        if self.chat is not None and blocks and today() > blocks[-1].day:
+        if self.chat is not None and self.live and blocks and today() > blocks[-1].day:
             await self.open(self.chat, today(), fill=False)
 
 
