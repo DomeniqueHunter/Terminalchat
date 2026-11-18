@@ -62,7 +62,7 @@ terminalchat
 
 The launcher runs the client inside its own [tmux](https://github.com/tmux/tmux) session (separate tmux server, so your own tmux setup is not touched). This allows the chat to keep running in the background:
 
-- `/minimize` detaches your terminal; the client stays connected, keeps receiving messages and writing logs.
+- `/minimize` detaches your terminal; the client stays connected, keeps receiving messages and writing logs. While nobody is attached, eicon animations are paused to save CPU; they continue when you re-attach.
 - Closing the terminal or losing the SSH connection has the same effect.
 - Running `terminalchat` again re-attaches to the running session.
 - `/quit` (or `ctrl+q`) ends the client and the session.
@@ -140,6 +140,10 @@ Type commands into the input line.
 | `/help` | Show the command list (closes with `esc`) |
 | `/shortcuts` | Show all key bindings (alias: `/keys`, closes with `esc`) |
 | `/quit` | Exit |
+
+### Chat history
+
+A chat shows today's messages, below a line with the date (`──── 2026-11-19 ────`). If today has fewer than 20 messages, the previous day is shown as well. Scroll to the top to load older messages: in blocks of 300 lines, day by day, until "Beginning of the log". Blocks far above the visible area are dropped again when you scroll down, so only what you look at is kept in memory; the log files themselves are only read when needed. At midnight the open chat is cleared and starts with the new date line (the date lines are not written to the log). This applies to all chats including the console.
 
 ### Chat and ads input
 

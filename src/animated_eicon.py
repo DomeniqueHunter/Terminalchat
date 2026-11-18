@@ -15,6 +15,7 @@ from eicons import Eicon
 
 
 IDLE_SECONDS = 0.5
+DETACHED_IDLE_SECONDS = 2.0
 
 
 class FrameAnimation:
@@ -39,6 +40,9 @@ class FrameAnimation:
 
     def next_frame(self) -> None:
         if not self.is_attached:
+            return
+        if not getattr(self.app, "terminal_attached", True):
+            self.set_timer(DETACHED_IDLE_SECONDS, self.next_frame)
             return
         if not self.animation_enabled():
             if self.frame_index != 0:

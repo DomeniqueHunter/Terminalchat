@@ -1,4 +1,5 @@
 import asyncio
+from collections import OrderedDict
 import os
 import re
 import time
@@ -19,6 +20,10 @@ AVATAR_URL = "https://static.f-list.net/images/avatar/{name}.png"
 PROFILE_URL = "https://www.f-list.net/c/{name}"
 THUMB_URL = "https://static.f-list.net/images/charthumb/{name}"
 FULL_IMAGE_URL = "https://static.f-list.net/images/charimage/{name}"
+MAX_MEMORY_IMAGES = 100
+MAX_ASPECT = 4
+AVATAR_ROWS = 6
+THUMB_ROWS = 8
 EICON = "eicon"
 AVATAR = "icon"
 THUMB = "thumb"
@@ -79,12 +84,13 @@ def default_cache_dir() -> Path:
 
 class EiconCache:
 
-    def __init__(self, cache_dir:Path | None=None, max_age_hours:float=24) -> None:
+    def __init__(self, cache_dir:Path | None=None, max_age_hours:float=24, eicon_rows:int=4) -> None:
         self.cache_dir = cache_dir or default_cache_dir()
         for _, folder, _ in IMAGE_SOURCES.values():
             (self.cache_dir / folder).mkdir(parents=True, exist_ok=True)
         self.max_age = max_age_hours * 3600
-        self.images: dict[str, tuple[Eicon | None, float]] = {}
+        self.images: OrderedDict[str, tuple[Eicon | None, float]] = OrderedDict()
+        self.rows = {EICON: eicon_rows, AVATAR: max(eicon_rows, AVATAR_ROWS), THUMB: THUMB_ROWS}
         self.tasks: dict[str, asyncio.Task] = {}
         self.session: aiohttp.ClientSession | None = None
 
@@ -96,13 +102,25 @@ class EiconCache:
         key = f"{kind}:{name.strip().lower()}"
         cached = self.images.get(key)
         if cached is not None and time.monotonic() - cached[1] < self.max_age:
+            self.images.move_to_end(key)
             return cached[0]
         if key not in self.tasks:
             self.tasks[key] = asyncio.create_task(self._load(kind, name.strip().lower()))
         image = await self.tasks[key]
         self.images[key] = (image, time.monotonic())
+        self.images.move_to_end(key)
+        while len(self.images) > MAX_MEMORY_IMAGES:
+            self.images.popitem(last=False)
         self.tasks.pop(key, None)
         return image
+
+    def clear_memory(self) -> None:
+        self.images.clear()
+
+    def max_pixels(self, kind:str) -> tuple[int, int]:
+        cell = display_cell_size()
+        height = self.rows.get(kind, 4) * cell[1]
+        return height * MAX_ASPECT, height
 
     async def _load(self, kind:str, name:str) -> Eicon | None:
         path = self.file_path(kind, name)
@@ -115,7 +133,7 @@ class EiconCache:
         elif await self._fetch(url, path) != UPDATED:
             return None
         try:
-            return await asyncio.to_thread(load_frames, path)
+            return await asyncio.to_thread(load_frames, path, self.max_pixels(kind))
         except Exception as error:
             logging("debug.log", f"eicon {name} unreadable: {error!r}\n")
             return None
@@ -147,14 +165,26 @@ class EiconCache:
             await self.session.close()
 
 
-def load_frames(path:Path) -> Eicon:
+def display_cell_size() -> tuple[int, int]:
+    try:
+        from textual_image._terminal import probe_terminal
+        cell = probe_terminal().cell_size
+        return cell.width or 10, cell.height or 20
+    except Exception:
+        return 10, 20
+
+
+def load_frames(path:Path, max_size:tuple[int, int] | None=None) -> Eicon:
     frames: list[PILImage.Image] = []
     durations: list[int] = []
     with PILImage.open(path) as image:
         for index, frame in enumerate(ImageSequence.Iterator(image)):
             if index >= MAX_FRAMES:
                 break
-            frames.append(frame.convert("RGBA"))
+            converted = frame.convert("RGBA")
+            if max_size is not None and (converted.width > max_size[0] or converted.height > max_size[1]):
+                converted.thumbnail(max_size, PILImage.Resampling.LANCZOS)
+            frames.append(converted)
             duration = frame.info.get("duration") or DEFAULT_FRAME_MS
             if duration < 20:
                 duration = DEFAULT_FRAME_MS

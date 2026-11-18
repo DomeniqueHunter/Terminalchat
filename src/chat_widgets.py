@@ -99,6 +99,7 @@ class ChatLine(Vertical):
             remaining -= len(images)
             if images:
                 row = Horizontal(classes="eicons")
+                row.styles.height = self.eicon_height
                 self.rows.append((row, images))
                 yield row
 
@@ -173,7 +174,7 @@ class ChatLine(Vertical):
 
         if not row.is_attached or not self.is_attached:
             return
-        view = self.parent if isinstance(self.parent, VerticalScroll) else None
+        view = next((node for node in self.ancestors if isinstance(node, VerticalScroll)), None)
         at_end = view is not None and view.scroll_y >= view.max_scroll_y - 1
         try:
             if row.has_class("inline"):

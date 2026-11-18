@@ -2,6 +2,8 @@
 
 import asyncio
 import html
+import os
+import shutil
 
 from rich.style import Style
 from rich.text import Text
@@ -12,13 +14,14 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Label, ListItem, ListView, OptionList, Static, TextArea
 
 import login
-from chat_store import CHANNEL, CONSOLE, USER, Chat, is_ad_line
+from chat_store import CHANNEL, CONSOLE, USER, Chat
 from chat_widgets import ChatInput, ChatLine, CommandHints, InputModeBar, StatusHeader
 from client import Client
 from color_config import gender_style
 import paths
 from animated_eicon import image_backend
 from chat_log import logging, set_log_dir
+from chat_pages import ChatPager
 from image_cells import current_cell_size, measure_cell_size, refresh_images, set_cell_size
 from config import Config
 from eicons import EiconCache, default_cache_dir
@@ -43,6 +46,8 @@ INPUT_BAR_REFRESH_SECONDS = 1.0
 RECONNECT_DELAYS = (5, 15, 30, 60, 120, 300)
 TICKET_MAX_AGE = 25 * 60
 RESIZE_CHECK_SECONDS = 0.5
+ATTACH_CHECK_SECONDS = 5
+DAY_CHECK_SECONDS = 30
 NO_RECONNECT_ERRORS = {9, 31}
 CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+a: ads)"
 
@@ -75,9 +80,11 @@ class ChatApp(App):
         self.friend_pairs: list[tuple[str, str]] | None = None
         self.eicons = None
         if config.get("eicons", "inline") == "inline":
-            self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)))
+            self.eicons = EiconCache(max_age_hours=float(config.get("eicon_max_age_hours", 24)),
+                                     eicon_rows=int(config.get("eicon_height", 4)))
         self.eicon_height = int(config.get("eicon_height", 4))
         self.gif_enabled = bool(config.get("eicon_animate", True))
+        self.terminal_attached = True
         self.active_chat: str | None = None
         self.list_ids: list[str | None] = []
         self.input_mode = "chat"
@@ -119,6 +126,37 @@ class ChatApp(App):
     def sidebar(self) -> Sidebar:
         return self.query_one("#sidebar", Sidebar)
 
+    def on_chat_scroll(self, y:float) -> None:
+        if not self.pager.loading and not self.view_lock.locked():
+            self.run_worker(self.scroll_worker(), group="pager")
+
+    async def scroll_worker(self) -> None:
+        async with self.view_lock:
+            await self.pager.on_scroll(self.chat_view.scroll_y)
+
+    def check_day(self) -> None:
+        self.run_worker(self.day_worker(), group="day")
+
+    async def day_worker(self) -> None:
+        async with self.view_lock:
+            await self.pager.check_day()
+
+    def check_attached(self) -> None:
+        self.run_worker(self.update_attached(), group="attach", exclusive=True)
+
+    async def update_attached(self) -> None:
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "tmux", "display-message", "-p", "#{session_attached}",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+            output, _ = await asyncio.wait_for(process.communicate(), timeout=3)
+        except (OSError, asyncio.TimeoutError):
+            return
+        attached = output.decode().strip() != "0"
+        if attached != self.terminal_attached:
+            self.terminal_attached = attached
+            logging("debug.log", f"tmux session {'attached' if attached else 'detached'}, animations {'resumed' if attached else 'paused'}\n")
+
     def on_resize(self, event:events.Resize) -> None:
         if getattr(self, "resize_timer", None) is not None:
             self.resize_timer.stop()
@@ -130,6 +168,8 @@ class ChatApp(App):
             self.redraw_images(f"Images: cell size changed to {cell.width}x{cell.height} px, redrawing images")
 
     def redraw_images(self, note:str) -> None:
+        if self.eicons is not None:
+            self.eicons.clear_memory()
         for screen in self.screen_stack:
             refresh_images(screen)
         if self.online:
@@ -158,6 +198,11 @@ class ChatApp(App):
         self.set_interval(SIDEBAR_REFRESH_SECONDS, self.refresh_sidebar)
         self.set_interval(GENDER_SAVE_SECONDS, self.save_genders)
         self.set_interval(INPUT_BAR_REFRESH_SECONDS, self.refresh_input_bar)
+        self.pager = ChatPager(self, self.chat_view, self.chat_line)
+        self.watch(self.chat_view, "scroll_y", self.on_chat_scroll, init=False)
+        self.set_interval(DAY_CHECK_SECONDS, self.check_day)
+        if os.environ.get("TMUX") and shutil.which("tmux"):
+            self.set_interval(ATTACH_CHECK_SECONDS, self.check_attached)
         self.chat_input.name_source = self.complete_names
         self.sidebar.name_style = self.name_style
         self.sub_title = "offline"
@@ -260,7 +305,7 @@ class ChatApp(App):
         self.active_chat = None
         self.sidebar_dirty.add(FRIENDS)
         await self.rebuild_list()
-        await self.chat_view.remove_children()
+        await self.pager.reset()
         await self.chat_view.mount(Static("No chats - press ctrl+o for the channel list or type /help", classes="placeholder"))
 
     async def on_unmount(self) -> None:
@@ -528,14 +573,7 @@ class ChatApp(App):
         async with self.view_lock:
             if self.active_chat != chat_id:
                 return
-            await self.chat_view.remove_children()
-            lines = self.client.store.history(chat)
-            if chat.kind == CHANNEL and not self.client.ads.visible(chat.key):
-                lines = [line for line in lines if not is_ad_line(line)]
-            widgets = [self.chat_line(line) for line in lines] or [Static("No messages yet", classes="placeholder")]
-            await self.chat_view.mount_all(widgets)
-            self.chat_view.scroll_end(animate=False)
-            self.chat_view.call_after_refresh(self.chat_view.scroll_end, animate=False)
+            await self.pager.open(chat)
         self.update_input_mode()
         await self.rebuild_list()
 
@@ -543,12 +581,7 @@ class ChatApp(App):
         if chat_id == self.active_chat:
             async with self.view_lock:
                 if chat_id == self.active_chat:
-                    view = self.chat_view
-                    at_end = view.scroll_y >= view.max_scroll_y - 1
-                    await view.query(".placeholder").remove()
-                    await view.mount(self.chat_line(line))
-                    if at_end:
-                        view.call_after_refresh(view.scroll_end, animate=False)
+                    await self.pager.append(line)
             return
         chat = self.client.store.get(chat_id)
         if chat is not None and mark_unread:
@@ -564,7 +597,7 @@ class ChatApp(App):
         if first:
             await self.open_chat(first)
             return
-        await self.chat_view.remove_children()
+        await self.pager.reset()
         await self.chat_view.mount(Static("No chats", classes="placeholder"))
         await self.rebuild_list()
 
