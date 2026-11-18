@@ -107,6 +107,7 @@ SHORTCUT_INFO = [
     ("ctrl+f", "show/hide friends and channel users"),
     ("ctrl+t", "minimize (detach, keep running)"),
     ("ctrl+p", "profile of the private chat partner"),
+    ("ctrl+pagedown", "jump to the newest message"),
     ("f1", "command palette"),
     ("ctrl+q", "quit"),
     ("escape", "close a dialog"),

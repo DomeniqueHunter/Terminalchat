@@ -152,6 +152,13 @@ class ChatApp(App):
             view.refresh(layout=True)
         trim_memory()
 
+    def action_jump_to_now(self) -> None:
+        self.run_worker(self.jump_worker(), group="jump", exclusive=True)
+
+    async def jump_worker(self) -> None:
+        async with self.view_lock:
+            await self.pager.jump_to_now()
+
     def check_day(self) -> None:
         self.run_worker(self.day_worker(), group="day")
 

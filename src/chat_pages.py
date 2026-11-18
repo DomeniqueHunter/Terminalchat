@@ -317,6 +317,14 @@ class ChatPager:
         if schedule is not None:
             schedule()
 
+    async def jump_to_now(self) -> None:
+        if self.chat is None:
+            return
+        if self.live and self.blocks:
+            self.view.scroll_end(animate=False)
+            return
+        await self.open(self.chat)
+
     async def check_day(self) -> None:
         blocks = self.blocks
         if self.chat is not None and self.live and blocks and today() > blocks[-1].day:

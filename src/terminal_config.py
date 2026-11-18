@@ -11,6 +11,7 @@ APP_BINDINGS = [
         ("ctrl+h", "help", "Help"),
         Binding("ctrl+b", "bbcode", "BBCode", show=False),
         ("ctrl+p", "profile", "Profile"),
+        Binding("ctrl+pagedown", "jump_to_now", "Now", show=False, priority=True),
     ]
 
 
