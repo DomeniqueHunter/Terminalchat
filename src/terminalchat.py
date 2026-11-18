@@ -22,6 +22,7 @@ import paths
 from animated_eicon import image_backend
 from chat_log import logging, set_log_dir
 from chat_pages import ChatPager
+from memory_trim import trim_memory
 from image_cells import current_cell_size, measure_cell_size, refresh_images, set_cell_size
 from config import Config
 from eicons import EiconCache, default_cache_dir
@@ -48,6 +49,7 @@ TICKET_MAX_AGE = 25 * 60
 RESIZE_CHECK_SECONDS = 0.5
 ATTACH_CHECK_SECONDS = 5
 DAY_CHECK_SECONDS = 30
+MEMORY_TRIM_DELAY = 3.0
 NO_RECONNECT_ERRORS = {9, 31}
 CHAT_PLACEHOLDER = "Type message or /help ...  (ctrl+enter: new line, ctrl+a: ads)"
 
@@ -133,6 +135,22 @@ class ChatApp(App):
     async def scroll_worker(self) -> None:
         async with self.view_lock:
             await self.pager.on_scroll(self.chat_view.scroll_y)
+
+    def schedule_memory_trim(self) -> None:
+        if getattr(self, "trim_timer", None) is not None:
+            self.trim_timer.stop()
+        self.trim_timer = self.set_timer(MEMORY_TRIM_DELAY, self.release_memory)
+
+    def release_memory(self) -> None:
+        try:
+            view = self.chat_view
+        except NoMatches:
+            return
+        clear_cache = getattr(view, "_clear_arrangement_cache", None)
+        if clear_cache is not None:
+            clear_cache()
+            view.refresh(layout=True)
+        trim_memory()
 
     def check_day(self) -> None:
         self.run_worker(self.day_worker(), group="day")

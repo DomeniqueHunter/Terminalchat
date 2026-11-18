@@ -15,6 +15,10 @@ TOP_TRIGGER_ROWS = 1
 RULE_WIDTH = 24
 
 
+def children_of(parent:Any, kind:type) -> list[Any]:
+    return [child for child in parent.children if isinstance(child, kind)]
+
+
 def today() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
@@ -85,7 +89,7 @@ class ChatPager:
 
     @property
     def blocks(self) -> list[Block]:
-        return list(self.view.query_children(Block))
+        return children_of(self.view, Block)
 
     def entries(self, day:str) -> list[str]:
         store = self.app.client.store
@@ -110,6 +114,7 @@ class ChatPager:
 
     async def mount_block(self, block:Block, before:Any=None) -> None:
         children = block.pending
+        block.pending = []
         if before is None:
             await self.view.mount(block)
         else:
@@ -140,6 +145,7 @@ class ChatPager:
     async def open(self, chat:Chat, day:str | None=None, fill:bool=True) -> None:
         self.chat = chat
         await self.view.remove_children()
+        self.request_trim()
         day = day or today()
         self.app.client.store.migrate(chat)
         lines = self.entries(day)
@@ -152,12 +158,12 @@ class ChatPager:
         self.view.call_after_refresh(self.view.scroll_end, animate=False)
 
     async def update_log_start(self) -> None:
-        has_start = bool(self.view.query_children(LogStart))
+        has_start = bool(children_of(self.view, LogStart))
         if self.older_range() is None:
             if not has_start:
                 await self.view.mount(LogStart(), before=0)
         elif has_start:
-            await self.view.query_children(LogStart).remove()
+            await self.view.remove_children(children_of(self.view, LogStart))
 
     async def load_older(self, keep_position:bool=True) -> bool:
         older = self.older_range()
@@ -203,8 +209,9 @@ class ChatPager:
         lines = [child for child in live.children if not isinstance(child, DayRule)]
         if len(lines) <= 2 * BLOCK_LINES:
             return
-        await live.remove_children(list(live.query_children(DayRule)) + lines[:BLOCK_LINES])
+        await live.remove_children(children_of(live, DayRule) + lines[:BLOCK_LINES])
         live.start += BLOCK_LINES
+        self.request_trim()
         await self.update_log_start()
 
     async def on_scroll(self, y:float) -> None:
@@ -220,18 +227,25 @@ class ChatPager:
             self.loading = False
 
     async def unload_far(self) -> None:
-        blocks = self.blocks
-        if len(blocks) < 2:
+        limit = self.view.scroll_y - self.view.size.height
+        far = []
+        for block in self.blocks[:-1]:
+            if block.virtual_region.bottom >= limit:
+                break
+            far.append(block)
+        if not far:
             return
-        top = blocks[0]
-        region = top.virtual_region
-        if region.bottom >= self.view.scroll_y - self.view.size.height:
-            return
-        height = region.height + sum(child.virtual_region.height for child in self.view.query_children(LogStart))
+        starts = children_of(self.view, LogStart)
+        height = sum(widget.virtual_region.height for widget in far + starts)
         old_y = self.view.scroll_y
-        await self.view.query_children(LogStart).remove()
-        await top.remove()
+        await self.view.remove_children(starts + far)
         self.view.call_after_refresh(self.view.scroll_to, y=max(0, old_y - height), animate=False)
+        self.request_trim()
+
+    def request_trim(self) -> None:
+        schedule = getattr(self.app, "schedule_memory_trim", None)
+        if schedule is not None:
+            schedule()
 
     async def check_day(self) -> None:
         blocks = self.blocks
