@@ -1,0 +1,26 @@
+{
+  "bertha": {
+    "bank": {
+      "examine": "Madame Bertha stands at the counter in her pink apron, her cane hooked over the rail and a ledger the size of a stool open in front of her. The teller counts her coins twice; she lets him. Whatever is in the bag at her hip is heavy, and she guards it like a teacup.",
+      "dialogues": [
+        "'Don't look so surprised, dear. Even a mountain has to make a deposit now and then.'",
+        "'Gold in the bank, cake in the café, and not a single stool wasted. That is how you keep a business.'",
+        "'Ten o'clock, every day. The teller knows better than to make me wait – I get rather heavy on my feet.'",
+        "'Save what you can, darling. A rainy day is just a ladies' afternoon with worse company.'",
+        "'I count my own coins. Nobody counts my coins but me. Nobody sits on my coins either.'",
+        "'Careful with that purse, dear. Gold is like a lady: it wants to be sat on safely.'"
+      ]
+    },
+    "tavern": {
+      "examine": "Madame Bertha has taken the broadest bench in the Gilded Tankard and fills most of it. A mug of hot spiced milk steams in front of her, her cane leans against the table, and she watches the room like a landlady off duty, which is to say she misses nothing.",
+      "dialogues": [
+        "'Evenings are for the Tankard, dear. A woman who works all day deserves a bench that holds.'",
+        "'No, I am not looking for a stool tonight. I am looking for a drink, and a little gossip.'",
+        "'They pour a decent mug here. Not as good as my tea, but I would never tell them so to their face.'",
+        "'Sit down, darling, you are blocking my view. Or sit on someone, I am not fussy.'",
+        "'Every tavern has a bar. Mine has a throne. This one has a bench, and I have made it mine.'",
+        "'Overheard half the town's secrets tonight already. Ask me nicely and one of them might be yours.'"
+      ]
+    }
+  }
+}

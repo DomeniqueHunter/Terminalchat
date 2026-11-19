@@ -1,0 +1,85 @@
+# Initial records of the NPCs working here: the NPC json is seeded from these values once;
+# later edits happen in the json.
+NPCS = {'ysabel': {'schema_version': 6,
+            'name': 'Ysabel',
+            'needs': {'hunger': 0, 'thirst': 0, 'sleep': 0, 'arousal': 0},
+            'npc': 'ysabel',
+            'age': 58,
+            'spouse': '',
+            'personality': 'warm, firm, tireless, hums to sleeping children',
+            'race': 'human',
+            'profile': {'kind': 'resident',
+                        'role': 'Matron of the Lantern House',
+                        'town': 'last_light',
+                        'building': 'orphanage',
+                        'look': 'A solid woman in a flour-dusted apron, grey '
+                                'hair pinned under a cap, a small brass '
+                                'lantern on a chain at her belt and a '
+                                'toddler usually attached to one leg.',
+                        'quotes': ["'Wipe your feet, wash your hands, then "
+                                   "we talk.'",
+                                   "'Nobody here goes to bed hungry. "
+                                   "Nobody.'",
+                                   "'Every coin and crumb lands in a small "
+                                   "mouth. I count.'"],
+                        'topics': {'work': ["'Eleven children, one stove and "
+                                            'a roof that leaks in three '
+                                            "places. We manage.'"],
+                                   'town': ["'Last Light gives more than it "
+                                            'admits. Most folk leave the '
+                                            "door ajar for a reason.'"],
+                                   'self': ["'I came for one night, thirty "
+                                            'years ago. The lantern was lit '
+                                            'and nobody asked me to '
+                                            "leave.'"]},
+                        'address': 'town:last_light:orphanage:1',
+                        'home': 'The Lantern House, Last Light',
+                        'prefs': {'role': 'switch',
+                                  'positions': [],
+                                  'flow': {}}},
+            'bag_extra': 0,
+            'first_name': 'Ysabel',
+            'last_name': 'Wick',
+            'gender': 'Female',
+            'level': 1,
+            'exp': 0,
+            'free_points': 0,
+            'gold': 50,
+            'body': {'height': 168,
+                     'weight': 82,
+                     'build': 'Curvy',
+                     'breasts': 'Massive',
+                     'endowment': 15,
+                     'girth': 12,
+                     'balls': 5,
+                     'endowment_shape': 'Human',
+                     'muscle': 40,
+                     'bust': 1800,
+                     'butt': 185,
+                     'fake': {},
+                     'breasts_real': 'Massive'},
+            'stats': {'strength': 5,
+                      'agility': 5,
+                      'vitality': 5,
+                      'intelligence': 5},
+            'affinity': {'melee': 0,
+                         'magic': 0,
+                         'dodge': 0,
+                         'guard': 0,
+                         'heal': 0},
+            'equipment': {'weapon': None,
+                          'head': None,
+                          'chest': {'id': 'ysabel_flour_apron', 'by': 'shop'},
+                          'gloves': None,
+                          'feet': None,
+                          'accessory': {'id': 'ysabel_brass_lantern',
+                                        'by': 'shop'},
+                          'lingerie': None,
+                          'crotch': None},
+            'inventory': ['potion_small'],
+            'records': {'deepest_stage': 0, 'runs': 0, 'kills': 0},
+            'deaths': {},
+            'pregnant': '',
+            'offspring': [],
+            'body_mods': {},
+            'enhancements': []}}

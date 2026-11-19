@@ -1,0 +1,11 @@
+KIND = "drainer"
+FATE = "drained"
+FILE_NAME = "drainer.json"
+MIN_STAGE = 12
+MIN_BUTT = 60
+MIN_ENDOWMENT = 4
+MIN_GIRTH = 4
+SHELF_LIMIT = 12
+PARTS = ("bust", "butt", "penis", "balls")
+BOTTLE_PREFIX = "drainer_bottle_"
+PRICES = {"bust": 400, "butt": 300, "penis": 400, "balls": 300}

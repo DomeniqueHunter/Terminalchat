@@ -1,0 +1,37 @@
+# Gear worn by the NPCs of this building (never sold, never looted).
+
+
+ITEMS = {'sven_bandage_wraps': {'armor': 1,
+                        'for': 'both',
+                        'name': 'Bandage Wraps',
+                        'no_loot': True,
+                        'note': 'Rolls of bandage wound across the chest.',
+                        'rarity': 'common',
+                        'shops': (),
+                        'slot': 'chest'},
+ 'sven_sand_bucket_charm': {'bonus': {'vitality': 1},
+                            'for': 'both',
+                            'name': 'Sand Bucket Charm',
+                            'no_loot': True,
+                            'note': 'A small bucket charm for luck.',
+                            'rarity': 'common',
+                            'shops': (),
+                            'slot': 'accessory'},
+ 'ulfhild_cracked_bone_whistle': {'bonus': {'strength': 1},
+                                  'for': 'both',
+                                  'name': 'Cracked Bone Whistle',
+                                  'no_loot': True,
+                                  'note': 'A whistle carved from a cracked '
+                                          'bone.',
+                                  'rarity': 'rare',
+                                  'shops': (),
+                                  'slot': 'accessory'},
+ 'ulfhild_ring_mistress_fur_vest': {'armor': 3,
+                                    'for': 'both',
+                                    'name': 'Ring-Mistress Fur Vest',
+                                    'no_loot': True,
+                                    'note': 'A bearskin vest worn smooth at '
+                                            'the shoulders.',
+                                    'rarity': 'rare',
+                                    'shops': (),
+                                    'slot': 'chest'}}

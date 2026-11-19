@@ -1,0 +1,14 @@
+{
+  "sex_with_slave": {
+    "weight": 4,
+    "needs": "slave",
+    "text": "{npc} takes {name} to a private room for an hour. The sounds are enough to make the corridor go quiet.",
+    "text_slave": "{npc} takes you to a private room. For an hour your body does exactly what she wants, over and over, while you watch from somewhere behind your own eyes."
+  },
+  "rough_anal": {
+    "weight": 3,
+    "needs": "slave",
+    "text": "{npc} has {name} pressed against the wall of a room with the door left open, and takes {name} from behind while the girls watch.",
+    "text_slave": "{npc} presses you against the wall of a room with the door left open and takes you from behind while the girls watch. Your body arches for her. You can only watch it do that."
+  }
+}

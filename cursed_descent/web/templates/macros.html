@@ -1,0 +1,71 @@
+{% macro button(label, command, kind="", enabled=True) -%}
+{% if kind == "danger" -%}
+<button type="button" class="danger" data-arm="Click again to confirm" ws-send
+  hx-vals='{{ {"action": "cmd", "text": command}|tojson }}'
+  {% if not enabled %}disabled{% endif %}>{{ label }}</button>
+{%- elif kind == "fill" -%}
+<button type="button" data-fill="{{ command }} " {% if not enabled %}disabled{% endif %}>{{ label }}</button>
+{%- else -%}
+<button type="button" class="{{ kind }}" ws-send
+  hx-vals='{{ {"action": "cmd", "text": command}|tojson }}'
+  {% if not enabled %}disabled{% endif %}>{{ label }}</button>
+{%- endif %}
+{%- endmacro %}
+
+{% macro panel(item, level=1, bare=False) -%}
+<section class="panel level{{ level }}">
+  {% if not bare %}<h{{ level + 2 }}>{{ item.title }}</h{{ level + 2 }}>{% endif %}
+  {% for line in item.lines %}<p>{{ line }}</p>{% endfor %}
+  {% for choice in item.choices %}
+  <div class="choice" data-keep="{{ choice.name }}">
+    <span>{{ choice.label }}:</span>
+    {% if choice.kind == "select" %}
+    <select name="{{ choice.name }}">
+      {% for value, text in choice.options %}<option value="{{ value }}"
+        {% if value == choice.value %}selected{% endif %}>{{ text }}</option>{% endfor %}
+    </select>
+    {% elif choice.kind == "wide" %}
+    <input name="{{ choice.name }}" value="{{ choice.value }}" size="40" maxlength="60" autocomplete="off">
+    {% elif choice.kind == "area" %}
+    <textarea name="{{ choice.name }}" rows="5" cols="44" maxlength="1000">{{ choice.value }}</textarea>
+    {% elif choice.kind == "text" %}
+    <input name="{{ choice.name }}" value="{{ choice.value }}" size="8" autocomplete="off">
+    {% else %}
+    {% for value, text in choice.options %}
+    <label><input type="radio" name="{{ choice.name }}" value="{{ value }}"
+      {% if loop.first %}checked{% endif %}> {{ text }}</label>
+    {% endfor %}
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% if item.timer %}<p id="timer" class="timer">{{ item.timer }}</p>{% endif %}
+  {% for bar in item.bars %}{{ live_bar(bar) }}{% endfor %}
+  {% if item.buttons %}<div class="buttons">
+    {% for b in item.buttons %}{{ button(b.label, b.command, b.kind, b.enabled) }}{% endfor %}
+  </div>{% endif %}
+  {% for row in item.rows %}
+  <div class="row2"><span>{{ row.text }}</span>
+    <span>{% for b in row.buttons %}{{ button(b.label, b.command, b.kind, b.enabled) }}{% endfor %}</span></div>
+  {% endfor %}
+  {% if item.tabbed %}
+  <div class="subtabs" data-tabs="{{ item.title }}">
+    <div class="strip">
+      {% for sub in item.sections %}<button type="button" data-pane="{{ loop.index0 }}"
+        class="{{ 'on' if loop.first }}">{{ sub.title }}</button>{% endfor %}
+    </div>
+    {% for sub in item.sections %}
+    <div class="pane {{ 'on' if loop.first }}">{{ panel(sub, level + 1, True) }}</div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {% for sub in item.sections %}{{ panel(sub, level + 1) }}{% endfor %}
+  {% endif %}
+</section>
+{%- endmacro %}
+
+{% macro live_bar(bar, oob=False) -%}
+<div class="bar" id="bar-{{ bar.key }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <span>{{ bar.label }}</span>
+  <progress max="{{ bar.maximum }}" value="{{ bar.value }}"></progress>
+</div>
+{%- endmacro %}

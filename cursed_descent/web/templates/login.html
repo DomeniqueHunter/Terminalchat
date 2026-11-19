@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cursed Descent – Login</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="login">
+<main class="login-box">
+  <h1>Cursed Descent</h1>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/login">
+    <fieldset><legend>Log in</legend>
+      <label>Account name <input name="name" autocomplete="username" required></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Log in</button>
+    </fieldset>
+  </form>
+  <form method="post" action="/register">
+    <fieldset><legend>Register</legend>
+      <label>Serial key <input name="serial" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX" required></label>
+      <label>Account name <input name="name" autocomplete="username" required></label>
+      <label>Password (min. {{ min_password }} characters)
+        <input name="password" type="password" autocomplete="new-password" required></label>
+      <button type="submit">Create account</button>
+    </fieldset>
+  </form>
+</main>
+</body>
+</html>

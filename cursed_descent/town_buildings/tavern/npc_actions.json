@@ -1,0 +1,25 @@
+{
+  "order_drink": {
+    "weight": 4,
+    "needs": "",
+    "text": "{npc} orders a mug at the bar and settles in with it."
+  },
+  "serve_order": {
+    "weight": 3,
+    "needs": "waiter",
+    "gold": [3, 8],
+    "text": "{npc} waves you over, orders a drink and presses a tip into your hand."
+  },
+  "watch_dancer": {
+    "weight": 2,
+    "needs": "dancer",
+    "gold": [5, 15],
+    "text": "{npc} watches you dance, claps once and tosses you a coin."
+  },
+  "milk_barrel": {
+    "weight": 3,
+    "needs": "milk",
+    "gold": [8, 20],
+    "text": "{npc} stops at your barrel, fills a mug and drinks it slowly. 'Fresh, dear.'"
+  }
+}

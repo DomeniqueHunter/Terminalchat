@@ -1,0 +1,5 @@
+<div id="cf-preview" hx-swap-oob="innerHTML">{{ figure|safe }}</div>
+<span id="cf-left" hx-swap-oob="true">{{ left }}</span>
+<div id="cf-errors" hx-swap-oob="innerHTML">{% for line in errors %}<p>{{ line }}</p>{% endfor %}</div>
+{% if done %}<div id="cf-close" hx-swap-oob="true" data-done="1"></div>{% endif %}
+<span id="cf-invalid" hx-swap-oob="true" data-fields="{{ invalid|join(',') }}"></span>

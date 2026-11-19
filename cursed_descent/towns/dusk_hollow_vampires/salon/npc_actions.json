@@ -1,0 +1,8 @@
+{
+  "leash_walk": {
+    "weight": 4,
+    "needs": "slave",
+    "text": "{npc} holds court. {name} kneels beside her chair, and ladies pat {name}'s head as they pass.",
+    "text_slave": "{npc} holds court. You kneel beside her chair, and every lady who passes pats your head and says something about you as if you were not there."
+  }
+}

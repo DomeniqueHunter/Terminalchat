@@ -1,0 +1,14 @@
+{
+  "leash_walk": {
+    "weight": 4,
+    "needs": "slave",
+    "text": "{npc} sits at the bar, and {name} kneels at her stool with the chain slack on the floor.",
+    "text_slave": "{npc} sits at the bar. You kneel at her stool, chain slack on the floor, and the whole room politely does not look."
+  },
+  "face_sit": {
+    "weight": 2,
+    "needs": "slave",
+    "text": "{npc} drains her glass and, without looking down, tugs the chain. {name} slides under her skirts and stays there.",
+    "text_slave": "{npc} drains her glass and, without looking down, tugs the chain. You slide under her skirts and stay there, working, while she talks to the barkeeper."
+  }
+}

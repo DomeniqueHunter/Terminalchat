@@ -1,0 +1,1 @@
+{% from "macros.html" import live_bar %}{% for part in parts %}{% if part.timer %}<p id="timer" class="timer" hx-swap-oob="true">{{ part.timer }}</p>{% endif %}{% for bar in part.bars %}{{ live_bar(bar, True) }}{% endfor %}{% endfor %}

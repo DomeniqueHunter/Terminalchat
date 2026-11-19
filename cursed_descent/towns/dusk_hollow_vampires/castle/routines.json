@@ -1,0 +1,60 @@
+{
+  "alexandra": {
+    "blood_bank": {
+      "examine": "Alexandra stands at the counter of the Blood Bank as if the room had been built around her. The clerk has already laid out a cold glass and a ledger; she turns the pages with one pale finger and does not hurry. Nobody in the queue dares to be first.",
+      "dialogues": [
+        "'Every vial has a name on it. I like to know whose it is before I drink.'",
+        "'A good vintage keeps its secrets. A poor one only keeps its price.'",
+        "'Give freely, dear. What I take by force is never as sweet.'",
+        "'The books are in order. They are always in order. I would notice otherwise.'",
+        "'I do not raise my voice here. The clerk learned that quickly.'",
+        "'Warm or cold, it is all mine in the end. Do not look so troubled.'"
+      ]
+    },
+    "tavern": {
+      "examine": "In the Red Cup the Duchess has taken the table nobody else would ever choose, and the room has rearranged itself around it. A glass of something dark stands untouched at her elbow. She watches the hall with calm, amused eyes, and conversations quietly lower as she passes her gaze across them.",
+      "dialogues": [
+        "'Sit, if you must. Standing makes the room nervous, and I enjoy my wine without nerves.'",
+        "'The Red Cup pours honestly. That is a rarer virtue than people think.'",
+        "'I come here to be seen. A ruler who hides starts rumours. A ruler who drinks gives them something to chew on.'",
+        "'Ask no questions about the vintage. I have never regretted that rule.'",
+        "'Do not bow. Merely do not interrupt.'",
+        "'Gossip is the cheapest kind of tax. I collect it every evening.'"
+      ]
+    },
+    "salon": {
+      "examine": "In the Salon of the Pale Alexandra sits at the centre of the room, not on the best chair but on the one that every other chair faces. Tea cools in a cup she has not touched. Ladies lean toward her, laugh a little too quickly, and keep their eyes on her hands.",
+      "dialogues": [
+        "'Society is only a leash with better manners. I prefer it that way.'",
+        "'Lean closer, darling. I hear much better when the room is afraid of missing it.'",
+        "'Gossip, tea and teeth. I do enjoy this room. It tells me who has been talking.'",
+        "'Compliments are cheap. I keep an account of who pays them and who owes them.'",
+        "'Smile less. It makes the liars harder to spot.'",
+        "'A seat is a gift. Remember who gave you yours.'"
+      ]
+    },
+    "brothel": {
+      "examine": "Alexandra waits in the red-lit hall of the Velvet Vein as calmly as in her own throne room. Heavy curtains hang behind her, and the house has gone very quiet. The madame bows without being told; nobody else in the hall pretends not to notice who has arrived.",
+      "dialogues": [
+        "'I own the street this house stands on. It is only polite to look in on the tenants.'",
+        "'Do not stare. If you wish to look, ask, and be prepared for the answer.'",
+        "'Everyone leaves a little lighter here. I only make sure it is gold they leave behind.'",
+        "'Private rooms, red curtains, and nobody remembers. A sensible arrangement.'",
+        "'You may stay. You may not hover. Choose.'",
+        "'I am not here for the show, dear. I am here to see who is in it.'"
+      ]
+    },
+    "@sleep": {
+      "examine": "Alexandra sleeps in the great bed under a black canopy, perfectly still, one hand closed around a chain that disappears over the edge of the mattress. The room is silent. Nobody wakes her.",
+      "dialogues": []
+    },
+    "@eat": {
+      "examine": "Alexandra takes her morning meal at a long black table: a goblet of something dark and warm, and nothing for anyone else. Her mood is as even as the surface of the cup.",
+      "dialogues": [
+        "'Do not speak while I drink. It is the one courtesy I insist on.'",
+        "'The morning is the only hour I allow myself to be hungry. Do not make it worse.'",
+        "'Sit. No. Stand. Better. I like to look at what I am keeping.'"
+      ]
+    }
+  }
+}

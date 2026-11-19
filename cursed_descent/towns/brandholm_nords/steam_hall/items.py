@@ -1,0 +1,37 @@
+# Gear worn by the NPCs of this building (never sold, never looted).
+
+
+ITEMS = {'ketil_towel_harness': {'armor': 1,
+                         'for': 'both',
+                         'name': 'Towel Harness',
+                         'no_loot': True,
+                         'note': 'Two rolled towels on a leather strap.',
+                         'rarity': 'common',
+                         'shops': (),
+                         'slot': 'chest'},
+ 'ketil_tube_cleaning_brush': {'bonus': {'agility': 1},
+                               'for': 'both',
+                               'name': 'Tube Cleaning Brush',
+                               'no_loot': True,
+                               'note': 'A long thin brush for the tubes.',
+                               'rarity': 'common',
+                               'shops': (),
+                               'slot': 'accessory'},
+ 'ragnhild_copper_steam_pipe': {'bonus': {'vitality': 1},
+                                'for': 'both',
+                                'name': 'Copper Steam Pipe',
+                                'no_loot': True,
+                                'note': 'A short copper pipe that hisses '
+                                        'softly.',
+                                'rarity': 'rare',
+                                'shops': (),
+                                'slot': 'accessory'},
+ 'ragnhild_damp_linen_wrap': {'armor': 1,
+                              'for': 'both',
+                              'name': 'Damp Linen Wrap',
+                              'no_loot': True,
+                              'note': 'A thin linen wrap that is never '
+                                      'entirely dry.',
+                              'rarity': 'common',
+                              'shops': (),
+                              'slot': 'chest'}}

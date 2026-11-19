@@ -1,0 +1,30 @@
+# Gear worn by the NPCs of fisher (never sold, never looted).
+
+
+ITEMS = {
+    'old_gorm_mast_length_fishing_rod': {'name': 'Mast-Length Fishing Rod',
+ 'slot': 'weapon',
+ 'rarity': 'epic',
+ 'class': 'polearm',
+ 'damage': 26,
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True,
+ 'note': "A fishing rod as long as a ship's mast, spliced from three poles and bound with tarred cord. The line is thick as a bootlace and the hook has landed things that were not fish."},
+    'old_gorm_fishbone_beard_braids': {'name': 'Fishbone Beard Braids',
+ 'slot': 'accessory',
+ 'rarity': 'epic',
+ 'allure': 2,
+ 'bonus': {'strength': 2},
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True,
+ 'note': 'Braids woven into a grey beard and threaded with small fish bones and a few green glass beads. They clatter softly when <<npc.old_gorm_first>> laughs and smell faintly of the harbour.'},
+    'old_gorm_tarred_sailcloth_vest': {'name': 'Tarred Sailcloth Vest',
+ 'slot': 'chest',
+ 'rarity': 'common',
+ 'armor': 6,
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True},
+}

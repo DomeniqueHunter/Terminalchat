@@ -1,0 +1,8 @@
+{
+  "leash_walk": {
+    "weight": 3,
+    "needs": "slave",
+    "text": "{npc} collects her order with {name} at her heel, and the clerk keeps his eyes on the counter.",
+    "text_slave": "{npc} collects her order while you wait at her heel. The clerk keeps his eyes on the counter and does not ask."
+  }
+}

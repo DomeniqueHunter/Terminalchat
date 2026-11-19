@@ -1,0 +1,83 @@
+<dialog id="create-dialog">
+  <div class="cf">
+    <h2>New character</h2>
+    <div id="cf-errors" class="cf-errors"></div>
+    <div id="cf-fields" ws-send hx-trigger="input delay:300ms, change"
+         hx-vals='{"action": "create_preview"}'>
+      <div class="cf-cols">
+        <div class="cf-col">
+          <fieldset><legend>Who</legend>
+            <label>First name <input name="cf_first" maxlength="{{ form.name_max }}" autocomplete="off"></label>
+            <label>Last name (optional) <input name="cf_last" maxlength="{{ form.name_max }}" autocomplete="off"></label>
+            <label>Gender
+              <select name="cf_gender" id="cf-gender">
+                {% for gender in form.genders %}<option{% if loop.first %} selected{% endif %}>{{ gender }}</option>{% endfor %}
+              </select></label>
+            <label>Race
+              <select name="cf_race">
+                {% for race in form.races %}<option value="{{ race.key }}">{{ race.name|capitalize }} ({{ race.height[0] }}-{{ race.height[1] }} cm, {{ race.weight[0] }}-{{ race.weight[1] }} kg)</option>{% endfor %}
+              </select></label>
+            <label>Age <input name="cf_age" type="number" min="{{ form.min_age }}" max="{{ form.max_age }}" value="{{ form.default_age }}"><small class="hint">{{ form.min_age }}–{{ form.max_age }}</small></label>
+            <label>Orientation
+              <select name="cf_orientation">
+                <option value="both">Both</option>
+                <option value="penis">Likes penises</option>
+                <option value="vagina">Likes vaginas</option>
+              </select></label>
+          </fieldset>
+          <fieldset><legend>Stats – <span id="cf-left">{{ form.points }}</span> points left</legend>
+            {% for stat in form.stats %}
+            <label class="cf-stat">{{ stat.title }}
+              <button type="button" data-step="-1" data-for="cf_stat_{{ stat.key }}">–</button>
+              <input name="cf_stat_{{ stat.key }}" type="number" min="0" max="{{ form.points }}" value="{{ stat.value }}">
+              <button type="button" data-step="1" data-for="cf_stat_{{ stat.key }}">+</button>
+            </label>
+            {% endfor %}
+            <p class="muted hint">Each 0–{{ form.points }}, together exactly {{ form.points }}.</p>
+            <p class="muted">STR melee damage · AGI dodge, crit · VIT hit points, armor · INT spells, mana, loot luck</p>
+          </fieldset>
+        </div>
+        <div class="cf-col">
+          <fieldset><legend>Body</legend>
+            <label>Height (cm) <input name="cf_height" type="number" min="{{ form.limits.height[0] }}" max="{{ form.limits.height[1] }}" value="{{ form.body.height }}"><small class="hint">{{ form.limits.height[0] }}–{{ form.limits.height[1] }}</small></label>
+            <label>Weight (kg) <input name="cf_weight" type="number" min="{{ form.limits.weight[0] }}" max="{{ form.limits.weight[1] }}" value="{{ form.body.weight }}"><small class="hint">{{ form.limits.weight[0] }}–{{ form.limits.weight[1] }}</small></label>
+            <label>Build
+              <select name="cf_build">
+                {% for build in form.builds %}<option{% if build == form.body.build %} selected{% endif %}>{{ build }}</option>{% endfor %}
+              </select></label>
+            <label>Bust (cc, 0 = flat) <input name="cf_bust" type="number" min="{{ form.limits.bust[0] }}" max="{{ form.limits.bust[1] }}" value="{{ form.body.bust }}"><small class="hint">{{ form.limits.bust[0] }}–{{ form.limits.bust[1] }}</small></label>
+            <label>Implants (cc, at most the bust) <input name="cf_fake" type="number" min="{{ form.limits.fake[0] }}" max="{{ form.limits.fake[1] }}" value="0"><small class="hint">{{ form.limits.fake[0] }}–{{ form.limits.fake[1] }}</small></label>
+            <label>Musculature (0-100) <input name="cf_muscle" type="number" min="{{ form.limits.muscle[0] }}" max="{{ form.limits.muscle[1] }}" value="{{ form.body.muscle }}"><small class="hint">{{ form.limits.muscle[0] }}–{{ form.limits.muscle[1] }}</small></label>
+            <label>Butt/hip (cm) <input name="cf_butt" type="number" min="{{ form.limits.butt[0] }}" max="{{ form.limits.butt[1] }}" value="{{ form.body.butt }}"><small class="hint">{{ form.limits.butt[0] }}–{{ form.limits.butt[1] }}</small></label>
+            <div class="hung" id="cf-hung" hidden>
+              <label>Cock length (cm) <input name="cf_endowment" type="number" min="{{ form.limits.endowment[0] }}" max="{{ form.limits.endowment[1] }}" value="{{ form.hung.length }}"><small class="hint">{{ form.limits.endowment[0] }}–{{ form.limits.endowment[1] }}</small></label>
+              <label>Cock girth (cm) <input name="cf_girth" type="number" min="{{ form.limits.girth[0] }}" max="{{ form.limits.girth[1] }}" value="{{ form.hung.girth }}"><small class="hint">{{ form.limits.girth[0] }}–{{ form.limits.girth[1] }}</small></label>
+              <label>Balls (cm) <input name="cf_balls" type="number" min="{{ form.limits.balls[0] }}" max="{{ form.limits.balls[1] }}" value="{{ form.hung.balls }}"><small class="hint">{{ form.limits.balls[0] }}–{{ form.limits.balls[1] }}</small></label>
+              <label>Shape
+                <select name="cf_shape">
+                  {% for shape in form.shapes %}<option{% if shape == form.hung.shape %} selected{% endif %}>{{ shape }}</option>{% endfor %}
+                </select></label>
+            </div>
+            <p class="muted">Later changes: Dr. Vane's clinic.</p>
+          </fieldset>
+        </div>
+        <div class="cf-col">
+          <fieldset><legend>Preview</legend>
+            <div id="cf-preview" class="portrait"></div>
+          </fieldset>
+        </div>
+      </div>
+      <fieldset><legend>For the other players</legend>
+        <label>Personality <textarea name="cf_personality" rows="3" maxlength="{{ form.text_max }}"></textarea></label>
+        <label>Appearance <textarea name="cf_look" rows="3" maxlength="{{ form.text_max }}"></textarea></label>
+        <label>F-List link (optional) <input name="cf_flist" placeholder="{{ form.flist }}&lt;name&gt;" autocomplete="off"></label>
+      </fieldset>
+    </div>
+    <div class="cf-buttons">
+      <button type="button" id="cf-cancel">Cancel</button>
+      <button type="button" ws-send hx-vals='{"action": "create_submit"}'>Create character</button>
+    </div>
+    <div id="cf-close"></div>
+    <span id="cf-invalid" data-fields=""></span>
+  </div>
+</dialog>

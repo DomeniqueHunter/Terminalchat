@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cursed Descent</title>
+<link rel="stylesheet" href="/static/app.css?v={{ assets }}">
+<script>
+try { document.documentElement.dataset.theme =
+  localStorage.getItem("theme") || "dark"; } catch (e) {}
+</script>
+<script src="/static/htmx.min.js"></script>
+<script src="/static/htmx-ext-ws.js"></script>
+</head>
+<body hx-ext="ws" ws-connect="/ws">
+<form id="app" onsubmit="return false">
+  <header id="top">
+    <label>Acting as:
+      <select id="viewer" name="viewer" ws-send hx-trigger="change"
+              hx-vals='{"action": "select"}'></select>
+    </label>
+    <span class="sep"></span>
+    <button type="button" id="new-character">New character</button>
+    <button type="button" ws-send hx-vals='{"action": "tool", "tool": "main"}'>★ Make main</button>
+    <button type="button" ws-send
+            hx-vals='{"action": "tool", "tool": "random_party"}'>Random party (4)</button>
+    <button type="button" id="theme-button">Light mode</button>
+    <span id="world-clock" class="clock" title="World time (1 day = 1 real hour)"></span>
+    <span id="stage" class="stage"></span>
+    {% if account %}<span class="sep"></span>
+    <span id="account-label" class="muted">{{ account.name }}</span>
+    <button type="button" id="logout">Log out</button>{% endif %}
+  </header>
+  <nav id="slots">
+    <span id="slot-buttons"></span>
+    <select id="hire" name="hire"></select>
+    <button type="button" ws-send
+            hx-vals='{"action": "cmd", "text": "!hire"}'>Hire</button>
+    <button type="button" ws-send
+            hx-vals='{"action": "cmd", "text": "!dismiss"}'>Dismiss</button>
+    <button type="button" ws-send
+            hx-vals='{"action": "cmd", "text": "!auto"}'>Autopilot on/off</button>
+    <button type="button" id="auto-time" ws-send
+            hx-vals='{"action": "tool", "tool": "auto_time"}'>Auto time: on</button>
+  </nav>
+  <main>
+    <aside id="left">
+      <fieldset><legend>Party</legend>
+        <div id="death-note" class="death-note"></div>
+        <div id="party-buttons" class="grid2"></div></fieldset>
+      <fieldset><legend>Profile</legend>
+        <div id="profile-buttons" class="grid2"></div></fieldset>
+      <fieldset><legend>Combat</legend>
+        <label class="row">Target [t]:
+          <input id="target" name="target" list="targets"
+                 autocomplete="off"></label>
+        <datalist id="targets"></datalist>
+        <label class="row">Spell:
+          <select id="spell" name="spell">
+            {% for spell in spells %}<option>{{ spell }}</option>{% endfor %}
+          </select></label>
+        <div id="combat-buttons" class="grid2"></div>
+        <fieldset class="inner"><legend>Hit enemy</legend>
+          <div id="hits" class="grid1"></div></fieldset>
+      </fieldset>
+      <fieldset><legend>Encounter</legend>
+        <div id="encounter" class="grid2"></div></fieldset>
+      {% if debug %}
+      <fieldset><legend>Test tools</legend>
+        <div class="grid2">
+          <button type="button" ws-send
+            hx-vals='{"action": "tool", "tool": "everyone_hits"}'>Everyone hits</button>
+          <button type="button" ws-send
+            hx-vals='{"action": "tool", "tool": "auto_run"}'>Auto run</button>
+          <button type="button" ws-send
+            hx-vals='{"action": "tool", "tool": "quick_start"}'>Quick start</button>
+          <button type="button" id="clear-log">Clear log</button>
+        </div>
+        <div id="debug-buttons" class="grid2"></div>
+      </fieldset>
+      {% endif %}
+    </aside>
+    <section id="center"><div id="log"></div></section>
+    <aside id="right">
+      <div id="tabs" role="tablist">
+        <button type="button" data-tab="character" class="on">Character <span id="free"></span><span id="mail-dot" class="badge"></span></button>
+        <button type="button" data-tab="party">Party <span id="party-badge" class="badge"></span></button>
+        <button type="button" data-tab="location">Location</button>
+        <button type="button" id="tabbtn-visit" data-tab="visit" hidden>Home</button>
+        <button type="button" id="tabbtn-sex" data-tab="sex" hidden>Sex</button>
+      </div>
+      <div id="subtabs" class="strip" role="tablist">
+        <button type="button" data-tab="character" class="on">Sheet</button>
+        <button type="button" data-tab="inventory">Inventory</button>
+        <button type="button" data-tab="family">Family</button>
+        <button type="button" data-tab="mail">Mail <span id="mail-badge" class="badge"></span></button>
+        <button type="button" data-tab="contacts">Address book</button>
+        <button type="button" data-tab="settings">Settings</button>
+      </div>
+      <div id="tab-character" class="tab on"></div>
+      <div id="tab-party" class="tab"></div>
+      <div id="tab-location" class="tab"></div>
+      <div id="tab-visit" class="tab"></div>
+      <div id="tab-sex" class="tab"></div>
+      <div id="tab-inventory" class="tab"></div>
+      <div id="tab-family" class="tab"></div>
+      <div id="tab-mail" class="tab"></div>
+      <div id="tab-contacts" class="tab"></div>
+      <div id="tab-settings" class="tab">
+        <fieldset><legend>Display</legend>
+          <button type="button" id="theme-setting">Switch theme</button>
+        </fieldset>
+        <fieldset><legend>Main character</legend>
+          <p class="muted">The star marks your main character.</p>
+          <button type="button" ws-send
+            hx-vals='{"action": "tool", "tool": "main"}'>★ Make main</button>
+        </fieldset>
+      </div>
+    </aside>
+  </main>
+  <footer>
+    <label>Chat as selected:
+      <input id="say-input" name="text" autocomplete="off"
+             placeholder="Type a command (!help) or answer a question"
+             ws-send hx-trigger="keyup[key=='Enter']"
+             hx-vals='{"action": "cmd"}'></label>
+    <button type="button" id="send" ws-send
+            hx-include="#say-input" hx-vals='{"action": "cmd"}'>Send</button>
+  </footer>
+  <div id="status"></div>
+  <span id="w-names" hidden data-names="[]"></span>
+  <div id="lobby-overlay"></div>
+  {% include "create_form.html" %}
+</form>
+<script src="/static/app.js?v={{ assets }}"></script>
+</body>
+</html>

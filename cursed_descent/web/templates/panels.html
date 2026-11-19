@@ -1,0 +1,325 @@
+{% from "macros.html" import button, panel %}
+<select id="viewer" name="viewer" hx-swap-oob="true" ws-send
+        hx-trigger="change" hx-vals='{"action": "select"}'>
+  <option value="" {% if not viewer %}selected{% endif %}>–</option>
+  {% for name in players %}
+  <option value="{{ name }}" {% if name == viewer %}selected{% endif %}>{{ name }}{{ ' ★' if name == main }}</option>
+  {% endfor %}
+</select>
+<span id="world-clock" class="clock" hx-swap-oob="true" data-day="{{ world.day }}" data-elapsed="{{ world.elapsed }}" data-length="{{ world.length }}" data-year-days="{{ world.year_days }}" data-weekdays="{{ world.weekdays }}"></span>
+<span id="stage" class="stage" hx-swap-oob="true">{{ stage }}</span>
+{% if account_name %}<span id="account-label" class="muted" hx-swap-oob="true">{{ account_name }}{% if is_admin %} <button type="button" class="admin-badge {{ 'on' if admin_on else 'ready' }}" ws-send hx-vals='{"action": "admin_powers"}' title="Click to switch admin powers {{ 'off' if admin_on else 'on' }}">🛡 ADMIN</button>{% endif %}</span>{% endif %}
+<span id="slot-buttons" hx-swap-oob="true">
+  {% for slot in slots %}
+  <button type="button" class="slot" {% if not slot.name %}disabled{% endif %}
+    ws-send hx-vals='{{ {"action": "select", "viewer": slot.name}|tojson }}'>{{ slot.label }}</button>
+  {% endfor %}
+</span>
+<select id="hire" name="hire" hx-swap-oob="true">
+  {% for value, label in hire %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+</select>
+<button type="button" id="auto-time" hx-swap-oob="true" ws-send
+  hx-vals='{"action": "tool", "tool": "auto_time"}'>Auto time: {{ 'on' if auto_time else 'off' }}</button>
+<div id="death-note" class="death-note" hx-swap-oob="true">{{ death_note }}</div>
+<div id="party-buttons" class="grid2" hx-swap-oob="true">
+  {% if party_rows %}<ul class="party-status">
+    {% for row in party_rows %}<li class="{{ 'dead' if not row.alive }}{{ ' you' if row.you }}">
+      <span class="who">{{ row.name }}{% if row.npc %} 🤖{% endif %}{% if not row.alive %} †{% endif %}</span>
+      <span class="hp">{{ row.hp }}/{{ row.max_hp }}</span>
+      <span class="bar"><span style="width:{{ row.percent }}%"></span></span></li>{% endfor %}
+  </ul>{% endif %}
+  {% for label, command in party_buttons %}{{ button(label, command) }}{% endfor %}
+</div>
+<div id="profile-buttons" class="grid2" hx-swap-oob="true">
+  {% for label, command in profile_buttons %}{{ button(label, command) }}{% endfor %}
+</div>
+<div id="combat-buttons" class="grid2" hx-swap-oob="true">
+  {% for label, command in combat_buttons %}{{ button(label, command) }}{% endfor %}
+</div>
+<datalist id="targets" hx-swap-oob="true">
+  {% for t in targets %}<option value="{{ t }}">{% endfor %}
+</datalist>
+<div id="hits" class="grid1" hx-swap-oob="true">
+  {% for e in hits %}
+  <div class="hit">
+    {{ button(e.uid ~ " " ~ e.name ~ " " ~ e.hp ~ "/" ~ e.max_hp, "!hit " ~ e.uid) }}
+    {{ button("?", "!examine " ~ e.uid) }}
+  </div>
+  {% else %}<span class="muted">no enemies</span>{% endfor %}
+</div>
+<div id="encounter" class="grid2" hx-swap-oob="true">
+  {% for b in encounter %}{{ button(b.label, b.command, b.kind) }}{% else %}<span class="muted">nothing here</span>{% endfor %}
+</div>
+{% if debug %}
+<div id="debug-buttons" class="grid2" hx-swap-oob="true">
+  {% for label, command in debug_buttons %}{{ button(label, command) }}{% endfor %}
+</div>
+{% endif %}
+<span id="free" hx-swap-oob="true">{% if free %}({{ free }}){% endif %}</span>
+<div id="status" hx-swap-oob="true">{{ status }}</div>
+
+<div id="tab-character" class="tab" hx-swap-oob="innerHTML">
+  {% if not character %}<p class="muted">No character selected.</p>{% else %}
+  <div class="sheet">
+    <div class="portrait">{{ character.figure|safe }}</div>
+    {% if is_admin %}<p class="strong"><span class="admin-badge">🛡 Admin account</span></p>{% endif %}
+    {% for line in character.head %}<p class="strong">{{ line }}</p>{% endfor %}
+    {% for line in character.body %}<p class="muted">{{ line }}</p>{% endfor %}
+    {% for line in character.sheet %}<p class="muted">{{ line }}</p>{% endfor %}
+    {% if character.flist %}<p class="muted"><a href="{{ character.flist }}" target="_blank" rel="noopener noreferrer">F-List profile</a></p>{% endif %}
+  </div>
+  <fieldset><legend>Stats – {{ character.free }} free</legend>
+    {% for stat in character.stats %}
+    <div class="stat">
+      <span>{{ stat.text }}</span>
+      <button type="button" {% if not character.free %}disabled{% endif %} ws-send
+        hx-vals='{{ {"action": "cmd", "text": "!add " ~ stat.short ~ " 1"}|tojson }}'>+1</button>
+      <button type="button" {% if not character.free %}disabled{% endif %} ws-send
+        hx-vals='{{ {"action": "cmd", "text": "!add " ~ stat.short ~ " " ~ character.free}|tojson }}'>+all</button>
+    </div>
+    {% endfor %}
+    {% for line in character.notes %}<p class="muted">{{ line }}</p>{% endfor %}
+  </fieldset>
+  {% endif %}
+</div>
+
+<span id="party-badge" hx-swap-oob="true" class="badge">{% if party and (party.requests or party.invite) %}●{% endif %}</span>
+<span id="w-names" hidden hx-swap-oob="true" data-names='{{ (w_names or [])|tojson }}'></span>
+<div id="lobby-overlay" hx-swap-oob="innerHTML">
+{% if lobby %}
+<div class="overlay" id="lobby-backdrop">
+  <div class="modal" role="dialog" aria-label="Lobbies">
+    <div class="modal-head"><h3>Lobbies</h3>
+      <button type="button" id="lobby-close" ws-send hx-vals='{"action": "cmd", "text": "!findlobby close"}'>✕</button></div>
+    {% if lobby.running %}<p class="muted">Your party is on a run. Lobbies open again when it ends.</p>{% endif %}
+    {% for card in lobby.cards %}
+    <section class="lobby-card {{ 'own' if card.own }}">
+      <div class="lobby-top"><b>{{ card.leader }}'s lobby{% if card.own %} (yours){% endif %}</b>
+        <span class="muted">{{ card.town }} · {{ card.count }}/{{ card.max }}</span></div>
+      <ul class="lobby-members">
+        {% for m in card.members %}
+        <li>{{ m.name }}{% if loop.first %} ★{% endif %}{% if m.npc %} (companion){% endif %}{% if m.offline %} <span class="muted">(offline)</span>{% endif %}
+          {% if m.kick %}{{ button("Kick", "!kick " ~ m.name) }}{% endif %}</li>
+        {% endfor %}
+        {% for _ in range(card.max - card.count) %}<li class="muted">free slot</li>{% endfor %}
+      </ul>
+      <div class="buttons">
+        {% if card.own %}
+          {{ button("Leave", "!leave") }}
+          {% if card.is_leader %}{{ button("Start", "!start") }}{% endif %}
+        {% else %}
+          {{ button("Join", "!join " ~ card.leader, "", not card.reason) }}
+          {% if card.reason %}<span class="muted">{{ card.reason }}</span>{% endif %}
+        {% endif %}
+      </div>
+    </section>
+    {% else %}
+    <p class="muted">No open lobby right now.</p>
+    {% endfor %}
+    {% if lobby.can_create %}<div class="buttons">{{ button("Create lobby", "!lobby") }}</div>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% if house %}
+<div class="overlay" id="house-backdrop">
+  <div class="modal house" role="dialog" aria-label="{{ house.title }}" style="width:min(980px,96vw);max-height:90vh">
+    <div class="modal-head"><h3>{{ house.title }}</h3>
+      <button type="button" id="house-close" ws-send hx-vals='{"action": "cmd", "text": "!house close"}'>✕</button></div>
+    <p class="muted">Comfort {{ house.comfort }} · Extra chest slots +{{ house.storage }}{% if not house.editable %} · view only{% endif %}</p>
+    <div class="house-columns" style="display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:8px">
+      <section class="house-plan" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-content:start">
+        {% for room in house.rooms %}
+        <div class="house-room" style="grid-column:{{ room.col }} / span {{ room.width }};grid-row:{{ room.row }}">
+          <h4>{{ room.icon }} {{ room.name }}</h4>
+          <div class="house-slots">
+            {% for slot in room.slots %}
+            <button type="button" class="house-slot{{ ' selected' if slot.selected }}" ws-send
+              hx-vals='{{ {"action": "cmd", "text": slot.command}|tojson }}'>{{ slot.icon }} {{ slot.item or slot.label }}</button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+      <section class="house-side">
+        {% if house.selected %}
+        <h4>{{ house.selected.icon }} {{ house.selected.label }}</h4>
+        <p>{{ house.selected.item or "Empty." }}</p>
+        {% if house.selected.remove %}<div class="buttons">{{ button("Take down", house.selected.remove) }}</div>{% endif %}
+        {% if house.selected.plant %}{% if house.selected.plant.text %}<p>🌱 {{ house.selected.plant.text }}</p>{% endif %}{% if house.selected.plant.progress %}<p class="muted">{{ house.selected.plant.progress }}</p>{% endif %}<div class="buttons">{% for u in house.selected.plant.actions + house.selected.plant.seeds %}{{ button(u.label, u.command) }}{% endfor %}</div>{% endif %}
+        {% if house.selected.uses %}<div class="buttons">{% for u in house.selected.uses %}{{ button(u.label, u.command) }}{% endfor %}</div>{% endif %}
+        {% if house.selected.editable %}
+        <h4>In your bag</h4>
+        <ul class="stash-items">
+          {% for c in house.selected.candidates %}<li>{{ button(c.label, c.command) }}</li>
+          {% else %}<li class="muted">Nothing that fits.</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% else %}
+        <p class="muted">Pick a spot on the floor plan.</p>
+        {% endif %}
+        {% if house.catalogue %}
+        <h4>Carpenter's catalogue <span class="muted">💰 {{ house.gold }}</span></h4>
+        <ul class="stash-items">
+          {% for c in house.catalogue %}<li>{{ button(c.label ~ " – " ~ c.price ~ " g", c.command, "", c.enabled) }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% if stash %}
+<div class="overlay" id="stash-backdrop">
+  <div class="modal stash" role="dialog" aria-label="{{ stash.title }}" style="width:min(900px,96vw);max-height:88vh">
+    <div class="modal-head"><h3>{{ stash.title }}</h3>
+      <button type="button" id="stash-close" ws-send hx-vals='{"action": "cmd", "text": "!stash close"}'>✕</button></div>
+    <div class="stash-columns" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px">
+      {% for side in (stash.left, stash.right) %}
+      <section class="stash-side">
+        <h4>{{ side.title }} <span class="muted">{{ side.count }}/{{ side.capacity }} 🎒</span></h4>
+        <p class="stash-gold">💰 {{ side.gold }} gold</p>
+        <div class="buttons">
+          {% for b in side.gold_buttons %}{{ button(b.label, b.command, "", b.enabled) }}{% endfor %}
+        </div>
+        <ul class="stash-items">
+          {% for item in side["items"] %}
+          <li>{{ button(side.arrow ~ " " ~ item.label if side.arrow == "←" else item.label ~ " " ~ side.arrow, item.command, "", not side.full) }}</li>
+          {% else %}<li class="muted">(empty)</li>{% endfor %}
+        </ul>
+        {% if side.full %}<p class="muted">No room on the other side.</p>{% endif %}
+      </section>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+</div>
+
+<div id="tab-party" class="tab" hx-swap-oob="innerHTML">
+  {% if not party %}<p class="muted">No character selected.</p>{% else %}
+  <h4>Party</h4>
+  {% if party.requests %}
+  <fieldset class="request"><legend>Request</legend>
+    {% for name in party.requests %}
+    <p><b>{{ name }}</b> asks you for a private moment.</p>
+    <div class="buttons">{{ button("Accept", "!consent " ~ name) }}{{ button("Decline", "!refuse " ~ name) }}</div>
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+  {% for name in party.waiting %}<p class="muted">You asked {{ name }} – waiting for an answer.</p>{% endfor %}
+  {% if party.invite %}
+  <fieldset><legend>Invitation</legend>
+    <p>{{ party.invite }} invites you to a lobby.</p>
+    <div class="buttons">{{ button("Join", "!join " ~ party.invite) }}{{ button("Decline", "!lobby decline") }}</div>
+  </fieldset>
+  {% endif %}
+  <div class="party-figures">{{ party.figures|safe }}</div>
+  {% for m in party.members %}
+  <fieldset class="{{ 'dead' if not m.alive }}"><legend>{{ m.name }}{% if m.offline %} (offline){% endif %}</legend>
+    <p>Lv {{ m.level }}, {{ m.height }} cm, {{ m.weight }} kg</p>
+    <progress max="{{ m.max_hp }}" value="{{ m.hp }}"></progress>
+    <small>{{ m.hp }}/{{ m.max_hp }}</small>
+    <div class="buttons">
+      <button type="button" ws-send
+        hx-vals='{{ {"action": "cmd", "text": "!auto " ~ m.name}|tojson }}'>Autopilot: {{ 'on' if m.auto else 'off' }}</button>
+      {% if m.kick %}{{ button("Kick", "!kick " ~ m.name, "danger") }}{% endif %}
+      {% if m.other %}
+      {{ button("Examine", "!examine " ~ m.name) }}
+      {% for label, topic in party.topics %}
+      {{ button(label, ("!banter " ~ m.name ~ " " ~ topic)|trim) }}
+      {% endfor %}
+      {% endif %}
+    </div>
+  </fieldset>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<div id="tab-location" class="tab" hx-swap-oob="innerHTML">
+  {% if not viewer %}<p class="muted">No character selected.</p>{% endif %}
+  {% if ribbon %}<div class="ribbon" style="--ribbon: {{ ribbon.color }}">
+    <div class="ribbon-bar"><b>{{ ribbon.icon }} {{ ribbon.name }}</b>{% if ribbon.boss %} <span>💀 Boss</span>{% endif %}<span class="ribbon-range">{{ ribbon.stages }}</span></div>
+    <div class="ribbon-intro">{{ ribbon.intro }}</div>
+  </div>{% endif %}
+  {% for item in location %}{{ panel(item) }}{% endfor %}
+  {% if run_shop and location %}<i id="run-shop" hidden></i>{% endif %}
+</div>
+
+<div id="tab-inventory" class="tab" hx-swap-oob="innerHTML">
+  {% if not inventory %}<p class="muted">No character selected.</p>{% else %}
+  <fieldset><legend>Equipment</legend>
+    {% for e in inventory.equipment %}
+    <div class="row2">
+      <span>{{ e.label }}: {{ e.name }}</span>
+      <span>
+        {% if e.filled %}{{ button("?", "!item " ~ e.slot) }}{{ button("✕", "!unequip " ~ e.slot) }}{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+    {% for line in inventory.sets %}<p class="muted">{{ line }}</p>{% endfor %}
+  </fieldset>
+  <fieldset><legend>Potions &amp; consumables</legend>
+    {% for p in inventory.potions %}
+    <div class="row2">
+      <span>{{ p.count }}× {{ p.text }}</span>
+      <span>{{ button("Consume", "!consume " ~ p.id) }}
+        {% if inventory.combat %}{{ button("Use", "!use " ~ p.id) }}{% endif %}</span>
+    </div>
+    {% else %}<p class="muted">none</p>{% endfor %}
+  </fieldset>
+  <fieldset><legend>Bag ({{ inventory.used }}/{{ inventory.size }})</legend>
+    {% for group in inventory.bag %}
+    <h5>{{ group.title }}</h5>
+    {% for r in group.rows %}
+    <div class="row2">
+      <span>{{ r.text }}</span>
+      <span>
+        {% if r.consumable %}{{ button("Use", "!use " ~ r.id) }}
+        {% else %}{{ button("Equip", "!equip " ~ r.number) }}{% endif %}
+        {{ button("?", "!item " ~ r.number) }}
+        {{ button("Drop", "!drop " ~ r.number) }}
+      </span>
+    </div>
+    {% endfor %}
+    {% else %}<p class="muted">empty</p>{% endfor %}
+  </fieldset>
+  {% endif %}
+</div>
+
+<div id="tab-family" class="tab" hx-swap-oob="innerHTML">
+  {% if not family %}<p class="muted">No character selected.</p>{% else %}
+  <h4>Family tree – {{ family.name }}</h4>
+  {% if family.empty %}<p class="muted">No family yet. Ask a relative below, or have children.</p>{% endif %}
+  {% for level, text in family.rows %}
+  <p class="tree" style="padding-left: {{ level * 24 }}px">{{ text }}</p>
+  {% endfor %}
+  {% for item in family.panels %}{{ panel(item) }}{% endfor %}
+  {% endif %}
+</div>
+
+<div id="tab-mail" class="tab" hx-swap-oob="innerHTML">
+  {% if not mail %}<p class="muted">No character selected.</p>{% else %}
+  {% for item in mail.panels %}{{ panel(item) }}{% endfor %}
+  {% endif %}
+</div>
+<span id="mail-badge" hx-swap-oob="true" class="badge">{% if mail and mail.unread %}{{ mail.unread }}{% endif %}</span>
+<span id="mail-dot" hx-swap-oob="true" class="badge">{% if mail and mail.unread %}●{% endif %}</span>
+
+<div id="tab-contacts" class="tab" hx-swap-oob="innerHTML">
+  {% if not viewer %}<p class="muted">No character selected.</p>{% endif %}
+  {% for item in friends %}{{ panel(item) }}{% endfor %}
+  {% for group in contacts %}
+  <fieldset><legend>{{ group.title }}</legend>
+    {% for c in group.rows %}
+    <p>{{ c.name }} ({{ c.gender }}) {{ c.age }}<br>
+      {% if c.address %}{{ c.address }}<br>{% endif %}
+      <span class="muted">{{ c.points }} chats</span></p>
+    {% else %}<p class="muted">Nobody yet – chat with the locals.</p>{% endfor %}
+  </fieldset>
+  {% endfor %}
+</div>
+
+<button type="button" id="tabbtn-visit" data-tab="visit" hx-swap-oob="true" {% if not visit %}hidden{% endif %}>{{ visit_label or "Home" }}</button>
+<button type="button" id="tabbtn-sex" data-tab="sex" hx-swap-oob="true" {% if not sex %}hidden{% endif %}>{{ sex.title if sex else "Sex" }}</button>
+<div id="tab-visit" class="tab" hx-swap-oob="innerHTML">{% if visit %}{{ panel(visit) }}{% endif %}</div>
+<div id="tab-sex" class="tab" hx-swap-oob="innerHTML">{% if sex %}{{ panel(sex) }}{% endif %}</div>

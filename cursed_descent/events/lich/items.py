@@ -1,0 +1,33 @@
+# Gear worn by the NPCs of lich (never sold, never looted).
+
+
+ITEMS = {
+    'isolde_crown_of_black_ice': {'name': 'Crown of Black Ice',
+ 'slot': 'head',
+ 'rarity': 'epic',
+ 'armor': 6,
+ 'bonus': {'intelligence': 6},
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True,
+ 'note': 'A tall crown of black ice, jagged as a mouthful of teeth and cold enough to burn. Frost forms on the bare skin beneath it and does not melt.'},
+    'isolde_gown_of_frozen_silk': {'name': 'Gown of Frozen Silk',
+ 'slot': 'chest',
+ 'rarity': 'epic',
+ 'armor': 10,
+ 'allure': 5,
+ 'for': 'lady',
+ 'shops': (),
+ 'no_loot': True,
+ 'note': 'A trailing gown of silk frozen stiff, glittering with frost and chiming softly when it moves. It clings to the figure like a cold hand and never thaws.'},
+    'isolde_sceptre_of_the_frozen_court': {'name': 'Sceptre of the Frozen Court',
+ 'slot': 'weapon',
+ 'rarity': 'epic',
+ 'class': 'staff',
+ 'damage': 30,
+ 'bonus': {'intelligence': 4},
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True,
+ 'note': 'A long sceptre of dark iron wrapped in a spiral of ice. Its tip is a clear shard that shows faces of the drowned, and it freezes whatever it touches.'},
+}

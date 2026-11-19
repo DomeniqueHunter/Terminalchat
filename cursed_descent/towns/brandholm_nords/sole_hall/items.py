@@ -1,0 +1,37 @@
+# Gear worn by the NPCs of this building (never sold, never looted).
+
+
+ITEMS = {'ingibjorg_gilded_toe_ring': {'allure': 2,
+                               'for': 'both',
+                               'name': 'Gilded Toe Ring',
+                               'no_loot': True,
+                               'note': 'A thin gold ring on her second toe, polished by decades of worship.',
+                               'rarity': 'epic',
+                               'shops': (),
+                               'slot': 'accessory'},
+ 'ingibjorg_throne_robe': {'armor': 2,
+                           'for': 'both',
+                           'name': 'Throne Robe',
+                           'no_loot': True,
+                           'note': 'A heavy red robe with fur trim.',
+                           'rarity': 'rare',
+                           'shops': (),
+                           'slot': 'chest'},
+ 'torben_servant_s_simple_tunic': {'armor': 1,
+                                   'for': 'both',
+                                   'name': "Servant's Simple Tunic",
+                                   'no_loot': True,
+                                   'note': 'A plain grey tunic with '
+                                           'kneeling-worn knees.',
+                                   'rarity': 'common',
+                                   'shops': (),
+                                   'slot': 'chest'},
+ 'torben_warm_water_basin': {'bonus': {'vitality': 1},
+                             'for': 'both',
+                             'name': 'Warm Water Basin',
+                             'no_loot': True,
+                             'note': 'A copper basin that stays pleasantly '
+                                     'warm.',
+                             'rarity': 'common',
+                             'shops': (),
+                             'slot': 'accessory'}}

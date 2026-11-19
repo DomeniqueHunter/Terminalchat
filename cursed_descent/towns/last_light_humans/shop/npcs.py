@@ -1,0 +1,93 @@
+# Initial records of the NPCs working here: the NPC json is seeded from these values once;
+# later edits happen in the json.
+NPCS = {'velvet': {'schema_version': 6,
+            'name': 'Velvet',
+            'needs': {'hunger': 0, 'thirst': 0, 'sleep': 0, 'arousal': 0},
+            'npc': 'velvet',
+            'age': 33,
+            'spouse': '',
+            'personality': 'witty, smooth, always selling',
+            'race': 'human',
+            'profile': {'kind': 'resident',
+                        'role': "Keeper of Velvet's shop",
+                        'town': 'last_light',
+                        'building': 'shop',
+                        'look': 'A slender woman behind a counter of '
+                                'glittering wares, sleeves rolled and a '
+                                'pencil in her hair.',
+                        'quotes': ["'Whatever you need, I've got it – or I "
+                                   "can make you need it.'",
+                                   "'Discounts are for people with good "
+                                   "legs.'",
+                                   "'Bring me back something shiny from "
+                                   "below.'"],
+                        'topics': {'work': ["'Sell me something from below "
+                                            "and I'll pay more than you'd get "
+                                            "anywhere else.'",
+                                            "'A discount is a favour. I only "
+                                            "do favours for friends.'"],
+                                   'town': ["'The whole town shops here. They "
+                                            "just pretend it was Hilda's "
+                                            "idea.'",
+                                            "'If it glitters, I probably have "
+                                            "its cousin.'"],
+                                   'self': ["'I started with a barrow and a "
+                                            'smile. Now I have the smile and '
+                                            "a counter.'",
+                                            "'Never trust a merchant who says "
+                                            "she's not selling.'"]},
+                        'address': 'town:last_light:shop:1',
+                        'home': 'Shop, Last Light',
+                        'prefs': {'role': 'switch',
+                                  'positions': [],
+                                  'flow': {'oral': 'G',
+                                           'footjob': 'G',
+                                           'spanking': 'T',
+                                           'bdsm': 'T'}}},
+            'bag_extra': 0,
+            'first_name': 'Velvet',
+            'last_name': 'Quill',
+            'gender': 'Female',
+            'level': 1,
+            'exp': 0,
+            'free_points': 0,
+            'gold': 50,
+            'body': {'height': 170,
+                     'weight': 60,
+                     'build': 'Slim',
+                     'breasts': 'Large',
+                     'endowment': 15,
+                     'girth': 12,
+                     'balls': 5,
+                     'endowment_shape': 'Human',
+                     'bust': 500,
+                     'muscle': 15,
+                     'butt': 88,
+                     'fake': {},
+                     'breasts_real': 'Large'},
+            'stats': {'strength': 5,
+                      'agility': 5,
+                      'vitality': 5,
+                      'intelligence': 5},
+            'affinity': {'melee': 0,
+                         'magic': 0,
+                         'dodge': 0,
+                         'guard': 0,
+                         'heal': 0},
+            'equipment': {'weapon': None,
+                          'head': None,
+                          'chest': {'id': 'velvet_shopkeeper_s_rolled_sleeve_blouse',
+                                    'by': 'shop'},
+                          'gloves': None,
+                          'feet': None,
+                          'accessory': {'id': 'velvet_pencil_in_her_hair',
+                                        'by': 'shop'},
+                          'lingerie': None,
+                          'crotch': None},
+            'inventory': ['potion_small', 'potion_small'],
+            'records': {'deepest_stage': 0, 'runs': 0, 'kills': 0},
+            'deaths': {},
+            'pregnant': '',
+            'offspring': [],
+            'body_mods': {},
+            'enhancements': []}}

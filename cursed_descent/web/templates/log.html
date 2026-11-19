@@ -1,0 +1,1 @@
+<div id="log" hx-swap-oob="{{ mode|default('beforeend') }}">{% for entry in entries %}<div class="line {{ entry.kind }}">{{ entry.text|e }}&nbsp;</div>{% endfor %}</div>

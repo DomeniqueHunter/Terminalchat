@@ -1,0 +1,31 @@
+# Gear worn by the NPCs of recruiter (never sold, never looted).
+
+
+ITEMS = {
+    'starch_grey_pinafore': {'name': 'Grey Pinafore',
+ 'slot': 'chest',
+ 'rarity': 'epic',
+ 'armor': 4,
+ 'allure': 1,
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True,
+ 'note': 'A starched grey pinafore pressed to a knife-edge and buttoned to the throat. It smells of chalk, ink and carbolic soap, and not a crease dares appear in it.'},
+    'starch_polished_cane': {'name': 'Polished Cane',
+ 'slot': 'weapon',
+ 'rarity': 'epic',
+ 'class': 'blunt',
+ 'damage': 12,
+ 'bonus': {'agility': 1},
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True,
+ 'note': 'A slim cane of polished black wood with a brass ferrule. It taps the floor in a steady rhythm and is used to point at the guilty.'},
+    'starch_clipboard_of_names': {'name': 'Clipboard of Names',
+ 'slot': 'accessory',
+ 'rarity': 'common',
+ 'bonus': {'intelligence': 2},
+ 'for': 'both',
+ 'shops': (),
+ 'no_loot': True},
+}

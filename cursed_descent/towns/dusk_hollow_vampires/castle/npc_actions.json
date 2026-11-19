@@ -1,0 +1,48 @@
+{
+  "sex_with_slave": {
+    "weight": 3,
+    "needs": "slave",
+    "when": "home,sleep",
+    "text": "{npc} pulls {name} onto the black sheets by the chain and takes what she wants, unhurried, until {name} shakes.",
+    "text_slave": "{npc} pulls you onto the black sheets by the chain. Your body opens for her before you can think, and you can only watch it happen as she takes her time with you."
+  },
+  "rough_anal": {
+    "weight": 5,
+    "needs": "slave",
+    "when": "home,sleep",
+    "text": "{npc} bends {name} over the arm of her chair, pushes her gown aside and takes {name} from behind, hard and slow, one hand around the chain.",
+    "text_slave": "{npc} bends you over the arm of her chair and pushes her gown aside without a word. She takes you from behind, hard and slow, all forty centimetres of her, one hand wrapped around your chain. Your body pushes back for her. You watch, and cannot stop it."
+  },
+  "face_sit": {
+    "weight": 3,
+    "needs": "slave",
+    "when": "home",
+    "text": "{npc} settles onto {name}'s face as onto a throne, one hand in {name}'s hair, and goes on with her reading.",
+    "text_slave": "{npc} settles onto your face as onto a throne. Your tongue starts to work before you decide anything, and she goes on with her reading as if you were furniture."
+  },
+  "leash_walk": {
+    "weight": 2,
+    "needs": "slave",
+    "when": "home",
+    "text": "{npc} walks a slow circle of the hall with {name} crawling at her heel.",
+    "text_slave": "{npc} walks a slow circle of the hall. You crawl at her heel, collar tight, watching your own hands move over the cold marble."
+  },
+  "sleep_beside": {
+    "weight": 4,
+    "needs": "slave",
+    "when": "sleep",
+    "text": "{npc} sleeps in the great bed with {name} curled at her feet, the chain looped around her wrist.",
+    "text_slave": "{npc} sleeps in the great bed, the chain looped around her wrist. You lie curled at her feet, awake and unable to move away. Every so often her foot finds you."
+  },
+  "feed_slave": {
+    "weight": 4,
+    "needs": "slave",
+    "when": "eat",
+    "satisfy": {
+      "hunger": 30,
+      "thirst": 30
+    },
+    "text": "{npc} breakfasts on a goblet of blood and feeds {name} scraps from her fingers.",
+    "text_slave": "{npc} breakfasts on a goblet of blood and feeds you scraps from her fingers. You open your mouth for each one."
+  }
+}
